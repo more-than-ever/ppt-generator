@@ -27,13 +27,23 @@ export default function App() {
   const [isOutlineOpen, setIsOutlineOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [hasKey, setHasKey] = useState(false);
+  const [imageModel, setImageModel] = useState('gpt-image-2');
   const [toastMessage, setToastMessage] = useState(null);
 
   useEffect(() => {
     fetchConfig().then((cfg) => {
       setHasKey(cfg.hasGptimage2Key || cfg.hasLlmKey);
+      if (cfg.gptimage2Model) {
+        setImageModel(cfg.gptimage2Model);
+      }
     });
   }, []);
+
+  const handleSwitchImageModel = async (newModel) => {
+    setImageModel(newModel);
+    await saveConfig({ gptimage2Model: newModel });
+    showToast(newModel === 'gpt-image-2-vip' ? '🚀 已切换为 VIP 极速通道 (约2000积分/次)' : '✨ 已切换为 gpt-image-2 经济通道 (约600积分/次)');
+  };
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -410,6 +420,8 @@ ${conceptSection}${bulletsSection}💡 **请您审阅并决定**：
       {/* Top Header */}
       <Header
         hasKey={hasKey}
+        imageModel={imageModel}
+        onChangeImageModel={handleSwitchImageModel}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onExport={handleExport}
         isExporting={isExporting}
@@ -502,11 +514,13 @@ ${conceptSection}${bulletsSection}💡 **请您审阅并决定**：
         )}
       </main>
 
-      {/* Settings Modal */}
+      {/* Settings Modal (Clean image2 vs vip switcher) */}
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
-        onConfigSaved={() => {
+        currentModel={imageModel}
+        onConfigSaved={(m) => {
+          if (m) setImageModel(m);
           fetchConfig().then((cfg) => {
             setHasKey(cfg.hasGptimage2Key || cfg.hasLlmKey);
           });

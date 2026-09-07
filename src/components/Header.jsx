@@ -4,6 +4,8 @@ import { THEMES } from '../services/pptxExport';
 
 export default function Header({
   hasKey,
+  imageModel = 'gpt-image-2',
+  onChangeImageModel,
   onOpenSettings,
   onExport,
   isExporting,
@@ -75,25 +77,45 @@ export default function Header({
             </button>
           )}
 
-          {/* API Key Status & Settings button */}
+          {/* 生图通道快速切换（image2 vs VIP） */}
+          <div className="flex items-center p-0.5 rounded-lg bg-neutral-900/90 border border-neutral-800 text-xs shadow-inner">
+            <button
+              type="button"
+              onClick={() => onChangeImageModel?.('gpt-image-2')}
+              className={`px-2.5 py-1 rounded-md transition font-medium flex items-center space-x-1.5 ${
+                imageModel === 'gpt-image-2'
+                  ? 'bg-purple-950/80 text-purple-300 border border-purple-500/50 shadow-sm'
+                  : 'text-neutral-400 hover:text-neutral-200'
+              }`}
+              title="gpt-image-2：约600积分/次，省积分经济首选"
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${imageModel === 'gpt-image-2' ? 'bg-purple-400' : 'bg-neutral-600'}`} />
+              <span>image2</span>
+              <span className="text-[10px] text-emerald-400/90 font-mono hidden sm:inline">省分</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onChangeImageModel?.('gpt-image-2-vip')}
+              className={`px-2.5 py-1 rounded-md transition font-medium flex items-center space-x-1.5 ${
+                imageModel === 'gpt-image-2-vip'
+                  ? 'bg-amber-950/80 text-amber-300 border border-amber-500/50 shadow-sm'
+                  : 'text-neutral-400 hover:text-neutral-200'
+              }`}
+              title="gpt-image-2-vip：约2000积分/次，VIP极速专属通道"
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${imageModel === 'gpt-image-2-vip' ? 'bg-amber-400' : 'bg-neutral-600'}`} />
+              <span>VIP</span>
+              <span className="text-[10px] text-amber-400/90 font-mono hidden sm:inline">极速</span>
+            </button>
+          </div>
+
+          {/* 详情与说明按钮 */}
           <button
             onClick={onOpenSettings}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition ${
-              hasKey
-                ? 'bg-emerald-950/40 border-emerald-800/60 text-emerald-400 hover:bg-emerald-900/40'
-                : 'bg-neutral-900 border-neutral-800 text-neutral-300 hover:text-white hover:bg-neutral-800'
-            }`}
-            title="配置 API 密钥"
+            className="p-1.5 text-neutral-400 hover:text-white rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 transition"
+            title="查看生图通道详情"
           >
             <Settings className="w-3.5 h-3.5" />
-            <span className="flex items-center space-x-1">
-              <span>API 设置</span>
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  hasKey ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
-                }`}
-              />
-            </span>
           </button>
         </div>
       </div>
