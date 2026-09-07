@@ -426,8 +426,6 @@ ${conceptSection}${bulletsSection}💡 **请您审阅并决定**：
         onExport={handleExport}
         isExporting={isExporting}
         hasSlides={Boolean(presentation && presentation.slides.length > 0)}
-        currentTheme={deckStyle.theme || 'dark'}
-        onChangeTheme={(th) => setDeckStyle(prev => ({ ...prev, theme: th }))}
         onEnterFullscreen={() => setIsFullscreen(true)}
       />
 

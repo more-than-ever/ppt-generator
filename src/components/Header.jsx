@@ -1,6 +1,5 @@
 import React from 'react';
-import { Presentation, Settings, Download, MonitorPlay, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
-import { THEMES } from '../services/pptxExport';
+import { Presentation, Settings, Download, MonitorPlay } from 'lucide-react';
 
 export default function Header({
   hasKey,
@@ -10,8 +9,6 @@ export default function Header({
   onExport,
   isExporting,
   hasSlides,
-  currentTheme,
-  onChangeTheme,
   onEnterFullscreen
 }) {
   return (
@@ -35,24 +32,6 @@ export default function Header({
 
         {/* Center / Right controls */}
         <div className="flex items-center space-x-2.5">
-          {/* Theme Selector */}
-          {hasSlides && (
-            <div className="relative inline-flex items-center">
-              <select
-                value={currentTheme}
-                onChange={(e) => onChangeTheme(e.target.value)}
-                aria-label="选择幻灯片配色风格"
-                className="text-xs bg-neutral-900 border border-neutral-800 text-neutral-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-neutral-600 cursor-pointer"
-              >
-                {Object.entries(THEMES).map(([key, t]) => (
-                  <option key={key} value={key}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
           {/* Fullscreen Demo */}
           {hasSlides && (
             <button
