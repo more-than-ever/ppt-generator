@@ -136,9 +136,10 @@ export const generateSlideImage = async ({
               if (pollData.status === 'failed') {
                 console.warn('Image task failed:', pollData.error);
                 return {
-                  url: fallbackImages[slideIndex % fallbackImages.length],
+                  url: null,
                   prompt: prompt || 'Presentation illustration',
                   isPlaceholder: true,
+                  isFailed: true,
                   errorReason: pollData.error || '生图接口响应异常'
                 };
               }
@@ -153,18 +154,12 @@ export const generateSlideImage = async ({
     console.warn('Image generation error:', err);
   }
 
-  const fallbackImages = [
-    'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1557804506-669a67965ba0?q=80&w=1200&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=1200&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1200&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=1200&auto=format&fit=crop',
-  ];
   return {
-    url: fallbackImages[slideIndex % fallbackImages.length],
+    url: null,
     prompt: prompt || 'Presentation illustration',
     isPlaceholder: true,
-    errorReason: '连接生图服务超时'
+    isFailed: true,
+    errorReason: '连接生图服务超时，请检查服务状态或稍后重试'
   };
 };
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Presentation, Settings, Download, MonitorPlay } from 'lucide-react';
+import { Presentation, Settings, Download, MonitorPlay, RotateCcw } from 'lucide-react';
 
 export default function Header({
   hasKey,
@@ -9,7 +9,8 @@ export default function Header({
   onExport,
   isExporting,
   hasSlides,
-  onEnterFullscreen
+  onEnterFullscreen,
+  onNewDeck
 }) {
   return (
     <header className="sticky top-0 z-30 w-full border-b border-neutral-800/80 bg-[#0A0A0B]/90 backdrop-blur-md px-6 py-3.5 transition-colors">
@@ -36,11 +37,23 @@ export default function Header({
           {hasSlides && (
             <button
               onClick={onEnterFullscreen}
-              className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:text-white bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-lg transition"
+              className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:text-white bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-lg transition cursor-pointer"
               title="全屏演示"
             >
               <MonitorPlay className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">演示</span>
+            </button>
+          )}
+
+          {/* New Deck button */}
+          {hasSlides && onNewDeck && (
+            <button
+              onClick={onNewDeck}
+              className="flex items-center space-x-1 px-2.5 py-1.5 text-xs text-neutral-400 hover:text-white bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-lg transition cursor-pointer"
+              title="新建演示文稿"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">新建</span>
             </button>
           )}
 

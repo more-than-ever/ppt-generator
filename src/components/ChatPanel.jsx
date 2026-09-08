@@ -12,7 +12,9 @@ import {
   FileCheck,
   Check,
   Mic,
-  MicOff
+  MicOff,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 export default function ChatPanel({
@@ -28,7 +30,10 @@ export default function ChatPanel({
   reworkTarget,
   onSetReworkTarget,
   onTriggerImageGen,
-  generatingImageIndex
+  generatingImageIndex,
+  isViewerOpen = false,
+  onOpenViewer,
+  onCloseViewer
 }) {
   const [inputText, setInputText] = useState('');
   const [attachedImages, setAttachedImages] = useState([]);
@@ -184,10 +189,14 @@ export default function ChatPanel({
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#0D0E12] border-r border-neutral-800/80 w-full md:w-[50%] lg:w-[50%] xl:w-[52%] flex-shrink-0">
+    <div className={`flex flex-col h-full bg-[#0D0E12] transition-all duration-300 ${
+      isViewerOpen
+        ? 'w-full md:w-[48%] lg:w-[46%] xl:w-[44%] border-r border-neutral-800/80 flex-shrink-0'
+        : 'w-full flex-1'
+    }`}>
       {/* Top Header with Style Anchor & Deck Meta */}
       <div className="px-4 py-3 border-b border-neutral-800 bg-[#0A0A0B]/80 backdrop-blur-md flex flex-col space-y-2">
-        <div className="flex items-center justify-between">
+        <div className={`flex items-center justify-between ${!isViewerOpen ? 'max-w-4xl mx-auto w-full' : ''}`}>
           <div className="flex items-center space-x-2">
             <span className="text-xs font-semibold text-white">AI 幻灯片 Agent</span>
             <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-400">
@@ -196,14 +205,27 @@ export default function ChatPanel({
           </div>
 
           {currentSlideCount > 0 && (
-            <span className="text-[10px] text-neutral-400">
-              当前选定第 {activeSlideIndex + 1} 页
-            </span>
+            <div className="flex items-center space-x-2">
+              <span className="text-[10px] text-neutral-400">
+                当前对话目标：第 {activeSlideIndex + 1} 页
+              </span>
+              {slides[activeSlideIndex]?.imageUrl && (
+                <button
+                  type="button"
+                  onClick={() => isViewerOpen ? onCloseViewer?.() : onOpenViewer?.(activeSlideIndex)}
+                  className="flex items-center space-x-1 px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 border border-blue-500/30 text-[10px] transition cursor-pointer"
+                  title={isViewerOpen ? '收起右侧画卷' : '展开右侧画卷'}
+                >
+                  {isViewerOpen ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                  <span>{isViewerOpen ? '收起画卷' : '展开画卷'}</span>
+                </button>
+              )}
+            </div>
           )}
         </div>
 
         {/* Locked Style Anchor Banner */}
-        <div className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-950/40 border border-emerald-800/50 text-[11px] text-emerald-300">
+        <div className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-950/40 border border-emerald-800/50 text-[11px] text-emerald-300 ${!isViewerOpen ? 'max-w-4xl mx-auto w-full' : ''}`}>
           <Lock className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
           <span className="font-semibold text-emerald-400">风格已全局锁定：</span>
           <span className="truncate text-white font-medium">{deckStyle?.name || '极简暗黑'}</span>
@@ -215,140 +237,158 @@ export default function ChatPanel({
 
       {/* Messages Scroll Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3.5">
-        {messages.map((msg, idx) => (
-          <div
-            key={idx}
-            className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
-          >
+        <div className={`space-y-3.5 ${!isViewerOpen ? 'max-w-4xl mx-auto w-full' : ''}`}>
+          {messages.map((msg, idx) => (
             <div
-              className={`max-w-[92%] rounded-2xl p-3 text-xs leading-relaxed ${
-                msg.role === 'user'
-                  ? msg.isRework
-                    ? 'bg-amber-600/90 text-white rounded-br-none shadow-md border border-amber-500/40'
-                    : 'bg-blue-600 text-white rounded-br-none shadow-md'
-                  : 'bg-neutral-850/90 text-neutral-200 border border-neutral-750/70 rounded-bl-none shadow-sm'
-              }`}
+              key={idx}
+              className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
             >
-              {/* User attached images preview */}
-              {msg.images && msg.images.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {msg.images.map((img, i) => (
-                    <img
-                      key={i}
-                      src={img}
-                      alt="upload thumbnail"
-                      className="w-20 h-20 object-cover rounded-lg border border-white/20"
-                    />
-                  ))}
-                </div>
-              )}
+              <div
+                className={`max-w-[92%] rounded-2xl p-3 text-xs leading-relaxed ${
+                  msg.role === 'user'
+                    ? msg.isRework
+                      ? 'bg-amber-600/90 text-white rounded-br-none shadow-md border border-amber-500/40'
+                      : 'bg-blue-600 text-white rounded-br-none shadow-md'
+                    : 'bg-neutral-850/90 text-neutral-200 border border-neutral-750/70 rounded-bl-none shadow-sm'
+                }`}
+              >
+                {/* User attached images preview */}
+                {msg.images && msg.images.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {msg.images.map((img, i) => (
+                      <img
+                        key={i}
+                        src={img}
+                        alt="upload thumbnail"
+                        className="w-20 h-20 object-cover rounded-lg border border-white/20"
+                      />
+                    ))}
+                  </div>
+                )}
 
-              <p className="whitespace-pre-wrap">{msg.text}</p>
+                <p className="whitespace-pre-wrap">{msg.text}</p>
 
-              {/* If assistant returned a slide reference */}
-              {msg.slideIndex && (
-                <div className="mt-2.5 flex flex-col space-y-2 w-full">
-                  {/* Action 1: View Slide Button */}
-                  <button
-                    onClick={() => onSelectSlide(msg.slideIndex - 1)}
-                    className={`flex items-center justify-between w-full px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition ${
-                      activeSlideIndex === msg.slideIndex - 1
-                        ? 'bg-blue-500/30 text-blue-200 border border-blue-400/40'
-                        : 'bg-neutral-800/80 text-neutral-300 hover:bg-neutral-800 border border-neutral-750/70'
-                    }`}
-                  >
-                    <span className="flex items-center space-x-1.5 truncate">
-                      <FileCheck className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-                      <span>查看第 {msg.slideIndex} 页排版效果</span>
-                    </span>
-                    <ChevronRight className="w-3.5 h-3.5 opacity-60 ml-1 flex-shrink-0" />
-                  </button>
+                {/* If assistant returned a slide reference */}
+                {msg.slideIndex && (
+                  <div className="mt-2.5 flex flex-col space-y-2 w-full">
+                    {(() => {
+                      const targetSlide = slides[msg.slideIndex - 1];
+                      const isGeneratingThis = generatingImageIndex === (msg.slideIndex - 1);
+                      const hasImage = Boolean(targetSlide?.imageUrl);
+                      const isCurrentlyViewing = isViewerOpen && activeSlideIndex === (msg.slideIndex - 1);
 
-                  {/* Action 2: Image Generation Box under Assistant Reply */}
-                  {(() => {
-                    const targetSlide = slides[msg.slideIndex - 1];
-                    const isGeneratingThis = generatingImageIndex === (msg.slideIndex - 1);
-                    const hasImage = Boolean(targetSlide?.imageUrl);
+                      return (
+                        <div className="rounded-xl border border-neutral-750/70 bg-neutral-900/90 p-2.5 flex flex-col space-y-2 shadow-xs">
+                          {hasImage ? (
+                            <div className="flex flex-col space-y-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center space-x-2 truncate">
+                                  <img
+                                    src={targetSlide.imageUrl}
+                                    alt="slide visual"
+                                    className="w-10 h-10 object-cover rounded-lg border border-neutral-700 flex-shrink-0"
+                                  />
+                                  <div className="flex flex-col truncate">
+                                    <span className="text-[10px] text-emerald-400 font-semibold flex items-center space-x-1">
+                                      <Check className="w-3 h-3" />
+                                      <span>GPT 16:9 画卷已渲染完成</span>
+                                    </span>
+                                    <span className="text-[9px] text-neutral-400 truncate max-w-[160px]">
+                                      {targetSlide.imagePrompt || '已渲染成品'}
+                                    </span>
+                                  </div>
+                                </div>
 
-                    return (
-                      <div className="rounded-xl border border-neutral-750/70 bg-neutral-900/90 p-2.5 flex flex-col space-y-2 shadow-xs">
-                        {hasImage ? (
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center space-x-2 truncate">
-                              <img
-                                src={targetSlide.imageUrl}
-                                alt="slide visual"
-                                className="w-10 h-10 object-cover rounded-lg border border-neutral-700 flex-shrink-0"
-                              />
-                              <div className="flex flex-col truncate">
-                                <span className="text-[10px] text-emerald-400 font-semibold flex items-center space-x-1">
-                                  <Check className="w-3 h-3" />
-                                  <span>本页配图已就绪</span>
-                                </span>
-                                <span className="text-[9px] text-neutral-400 truncate max-w-[140px]">
-                                  {targetSlide.imagePrompt || '定制商业插图'}
-                                </span>
-                              </div>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={() => onTriggerImageGen && onTriggerImageGen(msg.slideIndex - 1, extraPrompts[msg.slideIndex])}
-                              disabled={isGeneratingThis}
-                              className="px-2 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-750 text-neutral-300 text-[10px] flex items-center space-x-1 border border-neutral-700 transition active:scale-95 disabled:opacity-50 flex-shrink-0"
-                              title="让 GPT 重新渲染本页 16:9 完整 PPT 画面"
-                            >
-                              <RefreshCw className={`w-3 h-3 ${isGeneratingThis ? 'animate-spin text-blue-400' : 'text-neutral-400'}`} />
-                              <span>{isGeneratingThis ? 'GPT 渲染中...' : '重新让 GPT 渲染'}</span>
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col space-y-2">
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center space-x-1.5 text-[10px] text-neutral-300 font-medium truncate">
-                                <ImageIcon className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
-                                <span>GLM 蓝图就绪 · 待 GPT 渲染整页</span>
+                                <button
+                                  type="button"
+                                  onClick={() => onTriggerImageGen && onTriggerImageGen(msg.slideIndex - 1, extraPrompts[msg.slideIndex])}
+                                  disabled={isGeneratingThis}
+                                  className="px-2 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-750 text-neutral-300 text-[10px] flex items-center space-x-1 border border-neutral-700 transition active:scale-95 disabled:opacity-50 flex-shrink-0"
+                                  title="让 GPT 重新渲染本页 16:9 完整 PPT 画面"
+                                >
+                                  <RefreshCw className={`w-3 h-3 ${isGeneratingThis ? 'animate-spin text-blue-400' : 'text-neutral-400'}`} />
+                                  <span>{isGeneratingThis ? '渲染中...' : '重新渲染'}</span>
+                                </button>
                               </div>
 
-                              {/* Prominent Image Generation Button */}
+                              {/* Prominent Action Button: View Image on the Right */}
                               <button
                                 type="button"
-                                onClick={() => onTriggerImageGen && onTriggerImageGen(msg.slideIndex - 1)}
-                                disabled={isGeneratingThis}
-                                className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-semibold transition active:scale-95 disabled:opacity-50 flex-shrink-0 shadow-md"
-                                title="点击让 GPT 渲染整张 16:9 完整 PPT 画面"
+                                onClick={() => {
+                                  onSelectSlide(msg.slideIndex - 1);
+                                  if (isCurrentlyViewing) {
+                                    onCloseViewer?.();
+                                  } else {
+                                    onOpenViewer?.(msg.slideIndex - 1);
+                                  }
+                                }}
+                                className={`w-full py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1.5 transition active:scale-98 shadow-sm cursor-pointer ${
+                                  isCurrentlyViewing
+                                    ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-750'
+                                    : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white hover:from-blue-500 hover:to-purple-500 shadow-blue-500/20'
+                                }`}
                               >
-                                {isGeneratingThis ? (
+                                {isCurrentlyViewing ? (
                                   <>
-                                    <RefreshCw className="w-3 h-3 animate-spin" />
-                                    <span>GPT 渲染中...</span>
+                                    <EyeOff className="w-3.5 h-3.5 text-neutral-400" />
+                                    <span>收起右侧画卷（返回纯对话）</span>
                                   </>
                                 ) : (
                                   <>
-                                    <Sparkles className="w-3.5 h-3.5 text-blue-200" />
-                                    <span>🎨 让 GPT 渲染完整 PPT</span>
+                                    <Eye className="w-3.5 h-3.5 text-amber-300" />
+                                    <span>🖼️ 在右侧展开查看第 {msg.slideIndex} 页 16:9 终稿画卷</span>
                                   </>
                                 )}
                               </button>
                             </div>
+                          ) : (
+                            <div className="flex flex-col space-y-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center space-x-1.5 text-[10px] text-neutral-300 font-medium truncate">
+                                  <ImageIcon className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
+                                  <span>文案构思已在上方列出 · 待出图</span>
+                                </div>
 
-                            <div className="text-[9.5px] text-neutral-400 bg-black/40 px-2.5 py-1.5 rounded-lg border border-neutral-800/80 leading-relaxed">
-                              💡 <strong>分工机制</strong>：GLM 已构思好排版蓝图与 16:9 提示词。若需微调可在对话框输入；确认无误后点击上方<strong>「🎨 让 GPT 渲染完整 PPT」</strong>即可由 GPT 输出整张画面。
+                                {/* Prominent Image Generation Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => onTriggerImageGen && onTriggerImageGen(msg.slideIndex - 1)}
+                                  disabled={isGeneratingThis}
+                                  className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-semibold transition active:scale-95 disabled:opacity-50 flex-shrink-0 shadow-md cursor-pointer"
+                                  title="点击让 GPT 渲染整张 16:9 完整 PPT 画面"
+                                >
+                                  {isGeneratingThis ? (
+                                    <>
+                                      <RefreshCw className="w-3 h-3 animate-spin" />
+                                      <span>GPT 渲染中...</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                                      <span>🎨 交付 GPT 渲染完整 PPT</span>
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+
+                              <div className="text-[9.5px] text-neutral-400 bg-black/40 px-2.5 py-1.5 rounded-lg border border-neutral-800/80 leading-relaxed">
+                                💡 <strong>工作流</strong>：GLM 文案与构想已在上方列出。若满意文案，点击<strong>「🎨 交付 GPT 渲染完整 PPT」</strong>即可开始生图，出图后可在右侧展开查看。
+                              </div>
                             </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
 
-            <div className="flex items-center space-x-1 text-[9px] text-neutral-500 mt-1 px-1">
-              <span>{msg.role === 'user' ? (msg.isRework ? '返工修改要求' : '您的要求') : 'AI Agent 响应'}</span>
+              <div className="flex items-center space-x-1 text-[9px] text-neutral-500 mt-1 px-1">
+                <span>{msg.role === 'user' ? (msg.isRework ? '返工修改要求' : '您的要求') : 'AI Agent 响应'}</span>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
 
         {isLoading && (
           <div className="flex items-start">
@@ -368,6 +408,7 @@ export default function ChatPanel({
 
       {/* Input Area with Mode Switcher & Drag-and-Drop */}
       <div className="p-3 border-t border-neutral-800 bg-[#0A0A0B]/95 flex flex-col space-y-2">
+        <div className={`flex flex-col space-y-2 ${!isViewerOpen ? 'max-w-4xl mx-auto w-full' : ''}`}>
         {/* Mode Switcher Tabs (Only when deck has slides) */}
         {currentSlideCount > 0 && (
           <div className="flex items-center space-x-1 bg-neutral-900/90 p-1 rounded-xl border border-neutral-800 text-xs">
@@ -426,69 +467,104 @@ export default function ChatPanel({
             <>
               <button
                 type="button"
-                onClick={() => setInputText('精简本页文字，重点突出三个核心要点并强化视觉留白')}
+                onClick={() => setInputText('文案要充实具体，深入机制与落地动作抓手，给出明确可执行的措施，拒绝泛泛套话')}
+                className="flex-shrink-0 px-2 py-0.5 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300"
+              >
+                充实具体举措
+              </button>
+              <button
+                type="button"
+                onClick={() => setInputText('采用经典图文分栏排版：右侧内嵌独立图中图画框，左侧纵向展开各举措论据')}
+                className="flex-shrink-0 px-2 py-0.5 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300"
+              >
+                右侧图中图分栏
+              </button>
+              <button
+                type="button"
+                onClick={() => setInputText('重新排版为四象限 / 2x2 多维网格矩阵形式，角隅内嵌精致图示')}
+                className="flex-shrink-0 px-2 py-0.5 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300"
+              >
+                四象限矩阵
+              </button>
+              <button
+                type="button"
+                onClick={() => setInputText('重新排版为横向阶段推进流程路线图形式')}
+                className="flex-shrink-0 px-2 py-0.5 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300"
+              >
+                阶段流程流
+              </button>
+              <button
+                type="button"
+                onClick={() => setInputText('采用沉浸式全景大图背景与悬浮高对比度毛玻璃卡片，增强宏大视觉感染力')}
+                className="flex-shrink-0 px-2 py-0.5 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300"
+              >
+                沉浸全景大图
+              </button>
+              <button
+                type="button"
+                onClick={() => setInputText('精简本页文字，重点突出核心要点并强化留白呼吸感')}
                 className="flex-shrink-0 px-2 py-0.5 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300"
               >
                 精简提炼要点
-              </button>
-              <button
-                type="button"
-                onClick={() => setInputText('重新排版为核心量化数据指标卡形式')}
-                className="flex-shrink-0 px-2 py-0.5 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300"
-              >
-                改为指标排版
-              </button>
-              <button
-                type="button"
-                onClick={() => setInputText('重拟主标题与副标题，更具高端专业说服力')}
-                className="flex-shrink-0 px-2 py-0.5 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300"
-              >
-                重拟有力标题
               </button>
             </>
           ) : currentSlideCount === 0 ? (
             <>
               <button
                 type="button"
-                onClick={() => setInputText('生成极具视觉冲击力的封面：主标题、精辟副标题与主讲人信息')}
+                onClick={() => setInputText('生成极具视觉冲击力的封面：主标题、精辟副标题与主讲人信息，右侧内嵌图中图')}
                 className="flex-shrink-0 px-2 py-0.5 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300"
               >
-                生成发布会封面
+                生成正式封面
               </button>
               <button
                 type="button"
-                onClick={() => setInputText('极简商务封面：突出核心主题，严谨大气')}
+                onClick={() => setInputText('极简正式封面：突出核心主题与服务愿景，留白大气')}
                 className="flex-shrink-0 px-2 py-0.5 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300"
               >
-                极简商务封面
+                极简正式封面
               </button>
             </>
           ) : (
             <>
               <button
                 type="button"
-                onClick={() => setInputText('生成目录页：梳理本次分享的四个阶段与推进逻辑')}
+                onClick={() => setInputText('采用图文分栏排版：右侧内嵌独立精致图中图，左侧详细列出三项核心机制与落地举措')}
+                className="flex-shrink-0 px-2 py-0.5 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300"
+              >
+                图文分栏(图中图)
+              </button>
+              <button
+                type="button"
+                onClick={() => setInputText('生成实施阶段流程页：梳理从规划、落地到长效闭环的推进步骤与里程碑')}
+                className="flex-shrink-0 px-2 py-0.5 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300"
+              >
+                阶段流程推进页
+              </button>
+              <button
+                type="button"
+                onClick={() => setInputText('四象限网格矩阵：从四个核心维度展开具体实施举措与成效')}
+                className="flex-shrink-0 px-2 py-0.5 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300"
+              >
+                四象限矩阵页
+              </button>
+              <button
+                type="button"
+                onClick={() => setInputText('目录结构页：条理清晰地梳理本次汇报的四个核心板块')}
                 className="flex-shrink-0 px-2 py-0.5 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300"
               >
                 目录结构页
               </button>
               <button
                 type="button"
-                onClick={() => setInputText('突出核心数据：重点呈现增长率+142%、效率提升3.8倍')}
+                onClick={() => setInputText('沉浸全景大图页：以极契合主题的高清全景大图为背景，搭配悬浮高对比度毛玻璃卡片')}
                 className="flex-shrink-0 px-2 py-0.5 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300"
               >
-                数据指标页
+                沉浸全景大图页
               </button>
               <button
                 type="button"
-                onClick={() => setInputText('三阶段实施路线图：论证期、落地期与生态拓展期')}
-                className="flex-shrink-0 px-2 py-0.5 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300"
-              >
-                阶段流程页
-              </button>
-              <button
-                type="button"
-                onClick={() => setInputText('总结页：提炼关键共识并开放Q&A讨论')}
+                onClick={() => setInputText('总结展望页：提炼关键共识与实施承诺，开放互动交流')}
                 className="flex-shrink-0 px-2 py-0.5 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300"
               >
                 总结收尾页
@@ -633,6 +709,7 @@ export default function ChatPanel({
               )}
             </button>
           </div>
+        </div>
         </div>
       </div>
     </div>

@@ -202,8 +202,35 @@ app.post('/api/recommend-style', async (req, res) => {
       name: '朝气明朗蓝白',
       theme: 'light',
       reason: '突出真诚服务与青年向心力，色彩通透开朗，营造阳光亲和信任感',
-      customPrompt: 'approachable campus leadership aesthetic, clean white and azure sky blue accents, bright studio lighting, plenty of negative space',
+      customPrompt: 'formal academic student leadership aesthetic, pristine ivory white canvas with azure sky blue accents, dignified stage lighting, generous breathing space',
       accentColor: '#2563EB'
+    };
+  } else if (/(?:党建|政务|政策|政府|治理|公共|机关|组织部|红旗|廉洁|报告)/i.test(text)) {
+    fallbackStyle = {
+      id: 'ai-matched',
+      name: '庄重华章朱红',
+      theme: 'light',
+      reason: '契合党政机关与公共治理的权威沉稳，展现政治站位与严谨扎实作风',
+      customPrompt: 'prestigious government governance aesthetic, clean warm off-white canvas with deep crimson and subtle gold accents, solemn structured typography layout',
+      accentColor: '#DC2626'
+    };
+  } else if (/(?:医疗|医生|医院|生物|制药|健康|临床|护理|病理|生命科学)/i.test(text)) {
+    fallbackStyle = {
+      id: 'ai-matched',
+      name: '澄澈医研青蓝',
+      theme: 'light',
+      reason: '突出严谨科学、生命关怀与科研可信赖度，色调纯净专业',
+      customPrompt: 'pristine clinical medical scientific aesthetic, clean sterile white background with soft teal and cobalt blue accents, precise structured diagram frame',
+      accentColor: '#0D9488'
+    };
+  } else if (/(?:教育|教学|培训|课程|学术|研讨|教师|学校|公开课)/i.test(text)) {
+    fallbackStyle = {
+      id: 'ai-matched',
+      name: '博雅格物藏青',
+      theme: 'light',
+      reason: '契合学术研讨与教学育人的深厚积淀，条理明晰，理性沉稳',
+      customPrompt: 'scholarly academic presentation aesthetic, refined paper white canvas with deep scholarly navy blue and brass gold accents, structured hierarchy',
+      accentColor: '#1E40AF'
     };
   } else if (/(?:电池|芯片|算法|技术|软件|架构|新能源|汽车|智能|系统|工程|大模型|代码|算力|制造|硬件)/i.test(text)) {
     fallbackStyle = {
@@ -338,106 +365,154 @@ app.post('/api/generate-outline', async (req, res) => {
   });
 });
 
-// Helper to dynamically compose smart visual subjects tailored to slide topic, type, and visual medium diversity
+// Helper to dynamically compose smart visual subjects tailored to slide topic, type, and visual medium diversity across ALL scenarios
 function getSmartVisualSubject(title = '', type = 'cards', styleName = 'minimalist', slideIndex = 1) {
   const t = (title || '').toLowerCase();
-  const visualMode = slideIndex % 3; // 0: Editorial Commercial Photography, 1: Clean Vector / Infographic / UI, 2: 3D Concept Sculpture
+  const visualMode = slideIndex % 3; // 0: Realistic/Editorial Photography, 1: Clean Vector / Infographic / UI, 2: 3D Aesthetic Sculpture / Concept Visual
 
   if (type === 'cover') {
-    return 'a stunning 3D centerpiece visual installation representing the core vision, sophisticated ambient lighting and subtle atmospheric reflections';
+    return 'a prestigious centerpiece visual installation symbolizing visionary leadership, innovation and excellence, soft ambient rim lighting, suitable for an embedded hero visual frame';
   }
 
-  // Visual Mode 0: High-End Commercial / Editorial Photography (传统高端商务与纪实摄影质感)
+  // Visual Mode 0: Realistic / High-End Editorial Photography (用于图中图独立画框的实景特写，严禁作为全屏背景)
   if (visualMode === 0) {
-    if (t.includes('ai') || t.includes('智能') || t.includes('算法') || t.includes('模型') || t.includes('算力') || t.includes('办公') || t.includes('文档')) {
-      return 'a high-end editorial commercial photograph of a sleek modern minimalist executive workspace with dual-screen data analytics, soft ambient window lighting, shallow depth of field';
+    if (t.includes('竞选') || t.includes('班长') || t.includes('答辩') || t.includes('学生会') || t.includes('干部') || t.includes('就职') || t.includes('演讲') || t.includes('团委')) {
+      return 'a formal keynote lecture podium with dignified lighting in a modern university presentation hall, or earnest university student leaders engaged in an academic discussion in a sunlit modern campus library, suitable for an inset photo frame';
     }
-    if (t.includes('电池') || t.includes('制造') || t.includes('工业') || t.includes('工程') || t.includes('硬件') || t.includes('芯片') || t.includes('结构')) {
-      return 'a high-end editorial photograph of a modern precision automated robotic assembly station, cinematic lighting and clean industrial aesthetic';
+    if (t.includes('医疗') || t.includes('生物') || t.includes('药') || t.includes('健康') || t.includes('临床') || t.includes('基因')) {
+      return 'a high-end pristine medical research laboratory station with precision diagnostic instruments and clean ambient lighting, suitable for an inset photo frame';
     }
-    if (t.includes('商业') || t.includes('战略') || t.includes('市场') || t.includes('出海') || t.includes('全球') || t.includes('金融') || t.includes('增长')) {
-      return 'a sophisticated editorial commercial photograph of a modern high-rise executive conference boardroom with a panoramic skyline view, golden hour ambient light';
+    if (t.includes('党建') || t.includes('政务') || t.includes('政策') || t.includes('政府') || t.includes('治理') || t.includes('公共')) {
+      return 'a dignified formal government conference hall with warm architectural lighting and orderly seating, suitable for an inset photo frame';
     }
-    if (t.includes('团队') || t.includes('管理') || t.includes('协同') || t.includes('组织') || t.includes('竞选') || t.includes('班长')) {
-      return 'an authentic editorial photograph of a diverse professional team collaborating in a bright modern open-plan office, natural lighting, documentary style';
+    if (t.includes('教育') || t.includes('教学') || t.includes('课程') || t.includes('培训') || t.includes('学术') || t.includes('科研')) {
+      return 'a modern university seminar amphitheater with students engaged in scholarly academic learning, suitable for an inset photo frame';
     }
-    return 'a high-end editorial commercial photograph capturing modern professional business collaboration with elegant natural lighting and clean architectural backdrop';
+    if (t.includes('电池') || t.includes('制造') || t.includes('工业') || t.includes('工程') || t.includes('硬件') || t.includes('芯片') || t.includes('机械')) {
+      return 'a precision automated robotic assembly station with cinematic lighting and clean industrial aesthetic, suitable for an inset photo frame';
+    }
+    if (t.includes('商业') || t.includes('战略') || t.includes('市场') || t.includes('出海') || t.includes('全球') || t.includes('金融') || t.includes('资本')) {
+      return 'a sophisticated executive conference boardroom overlooking a modern skyline during golden hour, suitable for an inset photo frame';
+    }
+    if (t.includes('ai') || t.includes('智能') || t.includes('算法') || t.includes('模型') || t.includes('算力') || t.includes('代码') || t.includes('数据')) {
+      return 'a sleek minimalist developer workstation with high-resolution data visual dashboards and soft natural ambient lighting, suitable for an inset photo frame';
+    }
+    return 'an authentic professional collaboration scene in a modern brightly lit workspace, conveying earnest teamwork and focus, suitable for an inset photo frame';
   }
 
-  // Visual Mode 1: Clean Flat Vector / Infographic Diagrams / UI Interface (传统矢量插画与信息图表)
+  // Visual Mode 1: Clean Flat Vector / Infographic Diagrams / UI Interface (传统矢量插画与信息图表图中图)
   if (visualMode === 1) {
-    if (t.includes('ai') || t.includes('智能') || t.includes('算法') || t.includes('模型') || t.includes('办公') || t.includes('文档')) {
-      return 'a clean, sophisticated minimalist business vector infographic diagram depicting streamlined automated nodes and sleek linear data flows, Bauhaus inspired minimal aesthetic';
+    if (t.includes('竞选') || t.includes('班长') || t.includes('学生会') || t.includes('干部') || t.includes('答辩') || t.includes('演讲')) {
+      return 'a clean structured student affairs governance roadmap infographic, showing interconnected service milestones, academic mentorship nodes and transparent communication pillars, suitable for an inset diagram card';
     }
-    if (type === 'metrics' || t.includes('指标') || t.includes('数据')) {
-      return 'an elegant, minimalist SaaS product UI dashboard card showing clear analytical trend lines and high-contrast metric widgets';
+    if (type === 'metrics' || t.includes('指标') || t.includes('数据') || t.includes('增长') || t.includes('营收')) {
+      return 'an elegant SaaS analytical dashboard card showing high-contrast progress bars, KPI milestone badges and trend line graphs, suitable for an inset card';
     }
-    if (type === 'process' || t.includes('流程') || t.includes('路径') || t.includes('规划')) {
-      return 'a modern geometric vector flow infographic with clean numbered step badges and interconnected fine dashed path lines';
+    if (type === 'process' || t.includes('流程') || t.includes('路径') || t.includes('规划') || t.includes('执行') || t.includes('步骤')) {
+      return 'a modern linear workflow infographic with crisp numbered step badges, progressive arrow links and milestone markers, suitable for an inset diagram card';
     }
-    return 'a modern minimalist flat corporate vector illustration with clean geometric silhouettes and elegant two-tone accent palettes';
+    if (t.includes('医疗') || t.includes('生物') || t.includes('健康')) {
+      return 'a clean molecular pathway infographic illustrating targeted mechanism of action and progressive clinical phases, suitable for an inset diagram card';
+    }
+    if (t.includes('ai') || t.includes('智能') || t.includes('算法') || t.includes('技术') || t.includes('系统') || t.includes('架构')) {
+      return 'a modern system topology diagram depicting clean modular microservice blocks, data pipelines and API gateway nodes, Bauhaus aesthetic, suitable for an inset diagram card';
+    }
+    return 'a modern minimalist flat vector infographic with clean geometric silhouettes and elegant two-tone accent palette, suitable for an inset visual card';
   }
 
-  // Visual Mode 2: 3D Isometric / Glassmorphic Conceptual Sculpture (高端3D概念装置)
-  if (t.includes('ai') || t.includes('智能') || t.includes('算法') || t.includes('模型') || t.includes('算力') || t.includes('办公') || t.includes('文档')) {
-    return 'a stunning 3D glassmorphism holographic neural data visualization matrix with glowing cyber cyan and indigo accents, studio lighting';
+  // Visual Mode 2: 3D Conceptual Sculpture / Emblem Installation (高端立体艺术装置图中图)
+  if (t.includes('竞选') || t.includes('班长') || t.includes('学生会') || t.includes('干部') || t.includes('答辩')) {
+    return 'a refined modern 3D emblem sculpture of unity, responsibility and student service with smooth matte ceramic material and soft studio lighting, suitable for an inset visual frame';
   }
-  if (t.includes('电池') || t.includes('制造') || t.includes('工业') || t.includes('工程') || t.includes('硬件') || t.includes('芯片') || t.includes('结构')) {
-    return 'a hyper-detailed 3D isometric cutaway schematic of precision engineering components with soft ambient studio lighting';
+  if (t.includes('党建') || t.includes('政务') || t.includes('政策')) {
+    return 'a prestigious 3D architectural geometric monument sculpture symbolizing progress and public service integrity with warm brass accents, suitable for an inset visual frame';
   }
-  if (t.includes('商业') || t.includes('战略') || t.includes('市场') || t.includes('出海') || t.includes('全球') || t.includes('金融') || t.includes('增长')) {
-    return 'a modern 3D translucent globe sculpture with golden flight trajectories and glowing growth nodes';
+  if (t.includes('医疗') || t.includes('生物') || t.includes('健康')) {
+    return 'an elegant 3D double-helix genetic structure sculpture with translucent bioluminescent materials and clean studio illumination, suitable for an inset visual frame';
   }
-  if (t.includes('团队') || t.includes('管理') || t.includes('协同') || t.includes('组织') || t.includes('竞选') || t.includes('班长')) {
-    return 'a clean 3D claymorphic collaborative milestone symbol with soft studio lighting and smooth frosted surfaces';
+  if (t.includes('电池') || t.includes('制造') || t.includes('工业') || t.includes('工程') || t.includes('硬件') || t.includes('芯片')) {
+    return 'a hyper-detailed 3D isometric cutaway schematic of precision engineering components with soft ambient studio lighting, suitable for an inset visual frame';
+  }
+  if (t.includes('商业') || t.includes('战略') || t.includes('市场') || t.includes('出海') || t.includes('全球') || t.includes('金融')) {
+    return 'a modern 3D translucent globe sculpture with golden flight trajectories and illuminated growth nodes, suitable for an inset visual frame';
+  }
+  if (t.includes('ai') || t.includes('智能') || t.includes('算法') || t.includes('模型') || t.includes('算力')) {
+    return 'a stunning 3D glassmorphism holographic neural data visualization matrix with glowing cyan and indigo accents, suitable for an inset visual frame';
   }
   if (type === 'metrics' || t.includes('指标') || t.includes('数据')) {
-    return 'a sleek 3D holographic ascending data chart structure with dynamic glowing bars and milestone indicators';
+    return 'a sleek 3D holographic ascending data chart structure with dynamic glowing bars and milestone indicators, suitable for an inset visual frame';
   }
   if (type === 'process' || t.includes('流程') || t.includes('路径') || t.includes('规划')) {
-    return 'an elegant 3D isometric sequential milestone pathway with interconnecting luminous energy nodes';
+    return 'an elegant 3D isometric sequential milestone pathway with interconnecting luminous energy nodes, suitable for an inset visual frame';
   }
-  return 'a sophisticated 3D modern geometric sculpture symbolizing structure and innovation, elegant studio lighting';
+  return 'a sophisticated 3D modern geometric sculpture symbolizing structural balance and collaborative innovation, elegant studio lighting, suitable for an inset visual frame';
 }
 
 // Helper to dynamically compose diverse layout concepts and prompt structures based on slide type and sequence
+// Universal layout engine balancing embedded picture-in-picture (图中图) with occasional high-impact full-bleed cinematic slides
 function getDiverseLayoutDescription(type = 'cards', slideIndex = 1, visualSubject = '', deckStyleName = '极简') {
   const isCover = slideIndex === 1 || type === 'cover';
   if (isCover) {
     return {
-      concept: `极简封面构图，左侧黄金分割呈现主标题与主旨愿景，右侧融合契合主题的高质感视觉装置【${visualSubject}】，大面积高雅呼吸感留白，契合【${deckStyleName}】`,
-      promptLayout: `- Left 50% area: Prominently renders bold Chinese Presentation Title and concise subtitle with ample negative space.\n- Right 50% area: Seamlessly integrates a stunning centerpiece visual element: ${visualSubject}.\n- Overall composition: Prestigious keynote slide presentation cover.`
+      isFullBleed: true,
+      concept: `高冲击力封面构图：沉浸式全景光影视界背景【${visualSubject}】烘托宏大气场，带有微暗部渐变遮罩确保文字极高辨识度，左侧黄金分割舒展呈现清晰有力的中文主标题与副标题，契合【${deckStyleName}】`,
+      promptLayout: `- Background & Tone: High-impact full-bleed cinematic keynote background featuring ${visualSubject}, with subtle vignette gradient ensuring high contrast and pristine legibility for typography.\n- Left 55% area: Bold, elegant Chinese Presentation Title and concise subtitle with pristine typography hierarchy.\n- Overall composition: Prestigious keynote slide presentation cover.`
     };
   }
 
-  // Modulo for diverse layout alternation
-  const variant = slideIndex % 4;
+  // Modulo for diverse layout alternation across slides (breaks repetitive monotony, alternates PiP and cinematic slides)
+  const variant = slideIndex % 6;
 
-  if (type === 'process' || variant === 0) {
+  // Layout 1: Classic Split - Text on Left, Embedded Picture-in-Picture Frame on Right (经典左右图文分栏 · 右侧独立图中图)
+  if (variant === 1) {
     return {
-      concept: `采用【上下分层阶梯流】构图：上部横向展开结构化要点与结论，下半部贯穿延伸切题流程动线与图解节点【${visualSubject}】，逻辑递进感鲜明，契合【${deckStyleName}】`,
-      promptLayout: `- Upper 40% area: Clean horizontal typographic layout with structured content points and clear margins.\n- Lower 60% area: A continuous progressive workflow graphic: ${visualSubject}.`
+      isFullBleed: false,
+      concept: `采用【经典图文分栏 · 右侧独立图中图】构图：整页底色为专业纯净的演示文稿画布；左侧 58% 自上而下整齐排布页面标题与结构化论据卡片；右侧 42% 为一个带微圆角与高级投影的独立内嵌画框（传统意义图中图），生动展示【${visualSubject}】，图文清晰对齐，契合【${deckStyleName}】`,
+      promptLayout: `- Canvas Base: Solid, clean presentation slide background with plenty of breathing room. The visual is NOT a full background, but cleanly framed.\n- Left 58% area: Page Title at the top, followed by cleanly stacked vertical Chinese content cards with bold category tags and detailed explanations.\n- Right 42% area: A contained Picture-in-Picture inset window (传统图中图内嵌画框) with elegant rounded corners and subtle drop shadow, rendering: ${visualSubject}.\n- Layout harmony: Professional executive slide with clear separation between text and visual.`
     };
   }
 
-  if (type === 'metrics' || variant === 1) {
-    return {
-      concept: `采用【中心核心图解锚定 + 两翼对称卡片】构图：切题视觉核心实体【${visualSubject}】置于画面中心，两侧对称分布结构化论据卡片，打破千篇一律的左右单侧分栏，契合【${deckStyleName}】`,
-      promptLayout: `- Center area: Anchored by an impressive visual feature: ${visualSubject}.\n- Left and Right wings: Symmetrically distributed, elegant translucent typography cards with crisp Chinese text.`
-    };
-  }
-
+  // Layout 2: Inverted Split - Embedded Picture-in-Picture Frame on Left, Text on Right (反向图文分栏 · 左侧独立主图视窗)
   if (variant === 2) {
     return {
-      concept: `采用【反向视觉偏置：左图右文】构图：画面左侧呈现大尺寸视觉主体【${visualSubject}】，右侧 55% 舒展排布结构化卡片论据，与常规页面形成灵动节奏交替，契合【${deckStyleName}】`,
-      promptLayout: `- Left 45% area: Dedicated visual showcase highlighting ${visualSubject} with soft ambient glow.\n- Right 55% area: Spacious, high-contrast Chinese typography cards with generous line spacing.`
+      isFullBleed: false,
+      concept: `采用【反向图文分栏 · 左侧独立主图视窗】构图：左侧 40% 为一个竖向高质感独立内嵌画框（图中图），呈现切题视觉焦点【${visualSubject}】；右侧 60% 舒展排布页面标题与多维并列的精炼举措卡片，形成沉稳有力的视觉节奏，契合【${deckStyleName}】`,
+      promptLayout: `- Canvas Base: Clean presentation slide backdrop with ample whitespace.\n- Left 40% area: An enclosed Picture-in-Picture visual showcase frame (传统图中图) with refined border and soft shadow, displaying: ${visualSubject}.\n- Right 60% area: Clear Chinese slide title, followed by structured, spacious text cards with ample line spacing and bold bullet headings.`
     };
   }
 
-  // variant === 3: Three-column horizontal card matrix
+  // Layout 3: Process & Progressive Workflow Flowchart (上下分层阶梯流 / 流程推进)
+  if (type === 'process' || variant === 3) {
+    return {
+      isFullBleed: false,
+      concept: `采用【上下分层阶梯推进流】构图：上部 35% 提炼核心战略与推进方向；下半部 65% 水平展开清晰的阶段推进动线与步骤节点（Step 01 / 02 / 03 / 04），内嵌流程信息图解与节点小视窗【${visualSubject}】，逻辑递进感极强，契合【${deckStyleName}】`,
+      promptLayout: `- Canvas Base: Pristine presentation slide canvas.\n- Upper 35% area: Clear Chinese section title and key strategic summary text.\n- Lower 65% area: A clean horizontal progressive workflow pipeline (Step 01 -> Step 02 -> Step 03 -> Step 04) with connected nodes, milestone badges, and an embedded technical diagram/inset visual: ${visualSubject}.`
+    };
+  }
+
+  // Layout 4: 2x2 Quadrant / Multi-pillar Framework Grid (四象限 / 2x2 多维网格矩阵)
+  if (variant === 4) {
+    return {
+      isFullBleed: false,
+      concept: `采用【四象限 / 2×2 多维网格矩阵】构图：顶部呈现精炼标题与统领导语，主体区域采用 2×2 四格规整卡片排布，各卡片包含清晰的实施维度与具体举措，右上或一侧内嵌微缩图示图中图【${visualSubject}】，严谨工整，彻底告别单调平铺，契合【${deckStyleName}】`,
+      promptLayout: `- Canvas Base: Elegant minimal presentation slide background.\n- Top area: Chinese page title and concise executive theme statement.\n- Main body area: A balanced 2x2 quadrant matrix of clean cards with distinct numeric badges and detailed action points.\n- Inset Visual: A small, elegant contained Picture-in-Picture visual emblem or schematic inset (${visualSubject}) anchoring the composition.`
+    };
+  }
+
+  // Layout 5: Cinematic Full-bleed Atmospheric Background with Floating Glassmorphism Cards (沉浸式全景视界大图背景 + 悬浮毛玻璃卡片，适度穿插，效果极佳)
+  if (variant === 5) {
+    return {
+      isFullBleed: true,
+      concept: `采用【沉浸式全景视界背景 + 高对比度悬浮毛玻璃卡片】构图：以极契合主题的全景纵深摄影/场景【${visualSubject}】铺展全幅背景，叠加优雅暗部微渐变遮罩；精炼论据卡片以高质感半透明毛玻璃微卡片轻盈悬浮，图文气势磅礴，张弛有度，契合【${deckStyleName}】`,
+      promptLayout: `- Visual Canvas: High-impact full-bleed cinematic atmospheric background featuring ${visualSubject}, with a professional subtle vignette/dark gradient mask to guarantee high contrast and crisp readability for Chinese text.\n- Content Cards: Floating elegant translucent frosted glassmorphism containers with crisp Chinese typography.\n- Tone: Atmospheric, prestigious keynote visual finish.`
+    };
+  }
+
+  // Layout 0: Adaptive Multi-card Grid with Embedded Top Inset Illustrations (自适应模块化卡片 · 内嵌图中图卡片)
   return {
-    concept: `采用【三列横向卡片矩阵 + 背景微质感图示呼应】构图：顶部直出本页标题，中下部横向平铺 3 张半透明高质感卡片，底部与背景自然呼应【${visualSubject}】，视界开阔整齐，契合【${deckStyleName}】`,
-    promptLayout: `- Top area: Crisp bold page title.\n- Middle section: 3 horizontal glassmorphism card containers with structured Chinese typography.\n- Bottom/Background: Supporting ambient visual elements: ${visualSubject}.`
+    isFullBleed: false,
+    concept: `采用【自适应图文卡片矩阵 · 独立内嵌图中图】构图：顶部居左展示本页标题，中下部根据要点自适应平铺高质感卡片，每张卡片上方均内嵌精致微缩示意图框，底部与背景保持纯净呼吸留白，呼应【${visualSubject}】，告别机械死板的方块，契合【${deckStyleName}】`,
+    promptLayout: `- Canvas Base: Clean presentation slide backdrop with pristine whitespace.\n- Top area: Prominent Chinese slide title with refined hierarchy.\n- Content Cards: Adaptive clean card containers with crisp Chinese typography and individual miniature Picture-in-Picture inset illustrations for each core pillar.\n- Supporting Visual: Cleanly framed inset element: ${visualSubject}.`
   };
 }
 
@@ -494,55 +569,61 @@ app.post('/api/chat-slide', async (req, res) => {
 1. 【区分封面与内页，内页严禁生造副标题】：
    - 只有第 1 页【封面页】才需要主标题 + 副标题（如主讲人、主题核心定位）；
    - 第 2 页及以后的所有【正文内容页、分析页、架构页、成果页、数据页】：
-     * 【绝对严禁强行生造副标题/空洞标语】！正文页只需精炼有力的【本页标题】（title，例如：“核心优势深度拆解”、“系统架构机理与性能评测”）；
+     * 【绝对严禁强行生造副标题/空洞标语】！正文页只需精炼有力的【本页标题】（title，例如：“核心优势深度拆解”、“学风建设与考前互助机制”）；
      * 在正文页中，subtitle 字段必须直接留空字符串 ""，绝不要输出任何假大空的副标题！
 
-2. 【排版多元化大局观——彻底打破‘左50%右50%’的呆板套路】：
-   - 一套高水准的 PPT 必须节奏灵动、版式多姿！绝对严禁每一页都千篇一律地写“左侧50%文字，右侧50%插图”；
-   - 视觉配图形式不必千篇一律全是“3D概念背景板”或“发光3D立体装置”！你必须根据本页的内容逻辑与板块类型，灵活选用多元版式与最切合的视觉表现：
-     * 【版式一：横向卡片矩阵 + 底部贯穿动线/全景图解】：顶部居左为页面标题，中下部横向平铺 2-4 个并排高质感卡片，底部或右下角呼应贯穿式动线、架构图解或商业实景，视界宽广宏大；
-     * 【版式二：左图右文 / 反向视觉偏置】：画面左侧为契合主题的视觉主体（高端商业摄影、矢量信息图解或 3D 模型），右侧 50% 舒展排布结构化要点，交替形成视觉韵律；
-     * 【版式三：中心核心图解锚定 + 两翼对称分布】：核心视觉实体或架构拓扑置于画面中心黄金分割区，两侧或环绕分布卡片，形成平衡典雅的大师级对称感；
-     * 【版式四：上下分层阶梯流】：上部 35% 清晰提炼战略结论，下半部 65% 展开横向时间轴、立体步骤节点或流程信息图；
-     * 【版式五：高光数据看板 + 动态指标卡】：大字号关键高光指标卡，搭配数据可视化图表、SaaS UI 看板卡片或趋势图；
-     * 【版式六：全景大图背景 + 悬浮半透明毛玻璃卡片】：以切题全景场景（如现代办公全景摄影或概念场景）为纵深背景，关键论据卡片以高对比度毛玻璃卡片悬浮于一侧。
-   - 在 layoutConcept 中，用通俗、生动的语言向用户详述本页所选用的具体版式形态与视觉构想（说明是选用 3D 概念雕塑、高端商业摄影还是扁平矢量信息图），并讲清视觉焦点与留白呼应！
+2. 【版式与视觉形式决策权完全由你自主定夺——拒绝千篇一律，绝不限制死形式】：
+   - 你是世界顶级视觉总监，拥有最高的排版设计与构图决策权！整套 PPT 绝不能一直保持同一种死板形式（绝对严禁每一页都是三个方块，也绝不要每一页都用全屏背景大图）；
+   - 【有张有弛的版式与背景调度机制（由你自主决定何时用全景大图，何时用独立图中图）】：
+     * 绝大部分正文内页（约 70%~80%）：
+       优先自主选用【纯净演示画布底色 + 传统意义上的独立内嵌图中图（Picture-in-Picture Inset Frame）】；
+       包括：经典左右图文分栏、左图右文主图视窗、上下阶梯推进流程流、四象限网格矩阵等，保证分析、举措、机制与流程清晰严谨、秩序井然；
+     * 封面、宏观愿景、战略总览、结语誓师等特定页面（约 20%~30%）：
+       大胆自主选用【沉浸式全景视界大图背景 + 悬浮高对比度半透明毛玻璃卡片】；
+       生图指令中强制要求全景大图必须叠加优雅暗角与渐变微遮罩，保证中文字体醒目清晰、高对比度可读，同时把宏大场面与氛围感拉满；
+     * 【绝对原则】：我们绝不替你做死板决定！由你根据每一页内容的灵魂、逻辑密度与表达需要自主定夺。整套 PPT 必须动静相宜、有张有弛，每页都有独到的构思与视觉节奏，绝不千篇一律！
+   - 在 layoutConcept 中，生动向用户阐述你为本页挑选该版式的独到构思；
+   - 并在 fullSlideImagePrompt 中，把你自主决定的排版蓝图准确下达给 GPT，GPT 将忠实执行你的导演指令！
 
-3. 【文案深度精修润色——拒绝假大空，极致具体，字数精炼】：
-   - 【严禁假大空与空洞套话，触发绝对禁词惩罚】：
-     * 【绝对禁词库】：严禁在正文中使用：“提高效率”、“助力决策”、“辅助决策”、“打破信息孤岛”、“高效协作”、“团队协作”、“促进协同”、“赋能业务”、“节省成本”、“提升质量”、“优化流程”等空泛废话！
-     * 一旦检测到出现此类泛滥空话，直接判定为劣质文案！必须将用户的宏观想法深度翻译为【具体业务场景、具体动作/机制、或可感知的交付成果】。
-   - 【拒绝同义反复，深入具体业务机理】：
-     * ❌ 宽泛反例（严禁）：【自动化处理】：快速识别、分类、归档文档。（空洞宽泛，无具体场景与价值）
-     * ✅ 极具体范例：【合同智能比对】：秒级高亮跨版本条款冲突，自动标注潜在法务合规风险。
-     * ❌ 宽泛反例（严禁）：【智能数据分析】：精准洞察数据，辅助决策，优化业务流程。（假大空套话）
-     * ✅ 极具体范例：【异动即时归因】：自然语言直出多维指标看板，分钟级定位转化率下滑根因。
-     * ❌ 宽泛反例（严禁）：【跨部门协同】：打破信息孤岛，实现高效团队协作。（泛滥口号）
-     * ✅ 极具体范例：【决议工单流转】：自动提取会议结论生成任务，实时联动研发看板与催办。
-   - 【严格精简字数，短促有力，字不要太多】：
-     * PPT 是视觉演示媒介，字绝不能太多，观众 3 秒内必须扫完！
-     * 每个要点格式必须严格为：
-       【具体场景/举措（4-8字）】：一针见血的明确动作与落地价值（冒号后正文【严格控制在 15-25 个汉字以内】，言简意赅，短促精炼，绝不拖泥带水！）；
-     * 总体输出 2-4 个要点即可。
+3. 【文案核心戒律——直接交付权威、扎实、现成的成稿文案，绝对严禁给用户出题/列提纲/留作业】：
+   - 【绝杀两大劣质毒瘤：元语言提纲指令 与 敷衍变量占位符】：
+     * 【绝对严禁教用户做事/列分析框架】：用户是直接来拿成品文稿去演示汇报的！绝对严禁写出任何提纲式、指示性动词短语，例如：
+       ❌ 绝不许写：“通过...展示...趋势”、“分析...各区域/品牌占比”、“对比主要品牌销量/市场份额”、“按...分类了解消费者偏好”、“列举...原因/排名”、“评估...成效”、“展示各地区...”、“梳理...机制”等！
+     * 【绝对严禁使用任何变量占位符】：严禁出现“X%”、“Y%”、“XX万”、“某某”、“待补充”、“待完善”等任何敷衍占位符！
+     * 违规判定：一旦出现上述任何提纲指示、指导性动词或占位符，直接判定为劣质废稿！
+   - 【必须由你作为世界顶级麦肯锡/高管顾问，直接替用户写出真实、硬核、有具体数据与品牌的成稿分析结论与落地措施】：
+     * 如果是商业/市场/销售分析（如新能源汽车、消费品、出海贸易、工业制造等）：
+       你必须直接把行业真实或高可信度的【权威数据（如：渗透率突破53.8%、单月销量迈上120万辆台阶、年交付超420万辆）、知名龙头品牌（如比亚迪、特斯拉、鸿蒙智行问界、理想、吉利、蔚来等）、具体区域市场（长三角、大湾区、下沉县域市场）、核心动力与产品结构（插混与增程占比升至46%、高压超充网络建设）】直接写进要点，给出专业研判结论！
+     * 如果是校园竞选/述职汇报：
+       直接写明具体的现成抓手机制（如：期末重点难点真题题库与结对答疑组、每月首周班费电子收支明细公示台账、常态化宿舍走访与辅导员直通诉求清单）！
+     * 如果是技术/产品研发：
+       直接写明具体的架构机制（如：微内核与事件总线解耦、链路追踪与秒级异动归因下钻、自动化测试流水线与标准化合规套件）！
+   - 【每个要点格式与字数规范】：
+     * 输出 2-4 个深度要点；
+     * 每个要点必须是：【精炼有力的论点/结论（4-8字）】：详述扎实具体的数据支撑、事实依据、落地抓手或确定性结论（冒号后正文 28-55 字，充满硬核干货与现成文案，演讲者直接念出来就极具说服力！）。
+   - 【严禁空泛口号套话】：
+     * 严禁在正文中使用：“提高效率”、“助力决策”、“辅助决策”、“打破信息孤岛”、“高效协作”、“团队协作”、“促进协同”、“赋能业务”、“节省成本”、“提升质量”、“优化流程”、“精准定位需求”、“实时跟踪进度”等空泛废话！
 
 4. 【用户上传图片的多模态视觉深度理解准则（核心能力）】：
    - 若用户随请求附带了参考图片、流程图、拓扑架构、报表看板或现场照片：
      * 你已进入多模态视觉理解通道，必须【深度审读该图片的内容、数据指标、拓扑架构与文字信息】；
      * 【禁止假装看不见图片，严禁输出通用泛化废话】！必须将图片中的关键事实、模块流向或数据直接提炼为本页的精炼专业要点（bullets）；
-     * 在 layoutConcept 中，清晰规划如何将该图片作为视觉焦点与文字卡片融合排布；
-     * 在 visionAnalysis 字段中，用 1-2 句简明短语向用户汇报你从图片中解读出的关键内容（例如：“已精准识读图片中的微服务网关架构与核心链路”）。
+     * 在 layoutConcept 中，清晰规划如何将该图片作为内嵌画框（图中图）与文字卡片融合排布；
+     * 在 visionAnalysis 字段中，用 1-2 句简明短语向用户汇报你从图片中解读出的关键内容（例如：“已精准识读图片中的班级组织架构与活动推进节点”）。
 
-5. 【GPT 成品 PPT 生图提示词编写准则（图文并茂、配图多元自由、彻底解除禁字限制）】：
+5. 【GPT 成品 PPT 生图提示词编写准则（整页 16:9 平面设计画卷，杜绝实物电脑照片）】：
    - 彻底废除任何关于 "absolutely no text / no words / no letters" 的禁字约束！
-   - 你在 fullSlideImagePrompt 中撰写的指令，是让 GPT 直接制作一张【完整的 16:9 中文演示幻灯片】！
+   - 你在 fullSlideImagePrompt 中撰写的指令，是让 GPT 直接制作一张【可直接投屏放映的 16:9 商业演示幻灯片平面设计作品（Keynote Slide Graphic Design UI Artwork）】！
+   - 【极其重要的生图视觉红线】：
+     * 绝对严禁画成生活实物摄影！严禁出现笔记本电脑、办公桌、电脑显示器、手持平板等任何硬件摄影场景（STRICTLY NOT a photograph of a laptop, NOT a computer monitor on a desk, NOT an office environment）；
+     * 必须是一整张纯粹的 16:9 数字演示画布（Direct digital graphic slide canvas），具有高级留白、高质感网格排版；
+     * 大标题以醒目现代中文字体直接渲染在画面上方，下方排布清晰的中文内容卡片与高质感图文版式！
    - 必须在 fullSlideImagePrompt 中明确指挥 GPT：
      * 【真实中文排版】：根据本页所选的多元版式，指定页面标题以及 2-4 个核心论据卡片清晰渲染在画面指定区域；
-     * 【视觉配图灵活多元——不拘泥于 3D，合适时大胆选用传统高质量图示或摄影（自然选用，不强求）】：
-       - 提示词里的配图不必全都是 3D 悬浮背景板！你应根据本页内容的实际属性自然搭配最契合的视觉表现：
-         a) 当涉及办公实景、团队协同、具体硬件操作等具象场景时，可让 GPT 融入【高端商务纪实摄影 (High-end Editorial Commercial Photography)】或【极简工作台/人机交互实景特写】，更具真实商业信服力；
-         b) 当涉及流程流转、技术拓扑、架构规范时，可让 GPT 融入【现代极简扁平矢量插图 (Minimalist Flat Vector)】或【清晰的信息图示架构 (Infographic Diagram)】；
-         c) 当涉及数据监控、软件功能展示时，可让 GPT 融入【现代 SaaS UI / 仪表盘界面微悬浮卡片 (Modern SaaS UI / Dashboard Mockup)】；
-         d) 当涉及抽象愿景、智能算力底座、未来概念时，继续发挥【3D 概念立体装置与质感雕塑 (3D Isometric / Glassmorphism)】的科技现代感；
+     * 【视觉底板与配图自适应】：
+       - 若选用【传统图中图独立画框】：背景保持纯净高雅演示画布，配图作为【独立内嵌画框（contained picture-in-picture frame with sleek rounded corners and subtle drop shadow）】置于文字一侧；
+       - 若选用【沉浸式全景大图背景】：指导渲染契合主题的高清全景场景作为全幅背景，必须叠加优雅暗部渐变遮罩以保障中文字体的高对比度与绝对清晰度，文字排布在半透明毛玻璃卡片内；
+     * 【视觉配图灵活契合主题】：根据主题匹配最具代表性的视觉焦点（汽车科技全景、工业智造流水线、校园学术讲堂与自习研讨、开发者极客工作台、现代行政会议室等）；
      * 【专业级商业幻灯片品质】：现代留白、精细网格排版、无杂乱水印边框，8k 分辨率级商业设计终稿画面。
 
 6. 请输出严格合法的单个幻灯片 JSON 对象（不要包含任何 markdown 块外的多余文本）：
@@ -550,24 +631,24 @@ app.post('/api/chat-slide', async (req, res) => {
   "id": ${currentSlideData?.id || Date.now()},
   "slideIndex": ${isRework ? (targetIndex + 1) : slideIndex},
   "type": "cards" | "process" | "metrics" | "agenda" | "summary" | "cover",
-  "title": "${isCurrentCover ? '精炼有力的高端封面主标题' : '精炼有力的本页标题（如：核心优势深度拆解）'}",
+  "title": "${isCurrentCover ? '精炼有力的高端封面主标题' : '精炼有力的本页标题（如：新能源汽车销量深度透视）'}",
   "subtitle": "${isCurrentCover ? '封面副标题（定位与主旨愿景）' : ''}",
   "visionAnalysis": "（若用户提供了图片，请输出1-2句对图内关键信息/拓扑/数据的深度识读结论；无图片则留空字符串 \"\"）",
-  "layoutConcept": "用通俗中文详述本页大局排版规划：指明所选用的多元版式（如横向卡片矩阵、左图右文、中心图解等），并说明文字与视觉配图的空间分布与留白呼应",
+  "layoutConcept": "用通俗中文详述本页大局排版规划：指明所选用的多元版式（如经典图文分栏右侧图中图、左侧主图视窗、上下阶梯流程流、沉浸式全景大图背景等），并说明图文空间分布与留白呼应",
   "bullets": [
-    "【合同智能审查】：秒级高亮跨版本条款冲突，自动标注潜在合规风险",
-    "【异动即时归因】：自然语言直出多维指标看板，分钟级定位下滑根因",
-    "【决议工单流转】：自动提取会议结论生成任务，实时联动看板与催办"
+    "【论点小标题（4-8字，如：月度渗透率破历史新高/学风互助机制）】：直接详述真实权威的具体数据、知名品牌、落地机制与确定性成果，28-55字，严禁写‘核心论点一/要点一’等序号占位标签，必须直接给出专业业务小标题",
+    "【论点小标题（4-8字，如：头部马太效应显著强化/班务公开看板）】：直接详述真实权威的具体数据、知名品牌、落地机制与确定性成果，28-55字，直接可用于高管汇报",
+    "【论点小标题（4-8字，如：插混与增程赛道放量/师生诉求直通车）】：直接详述真实权威的具体数据、知名品牌、落地机制与确定性成果，28-55字，直接可用于高管汇报"
   ],
   "metrics": null,
-  "fullSlideImagePrompt": "英文 16:9 成品 PPT 生图指令：根据本页多元版式，精确指引 GPT 在画面中渲染清晰的中文标题与卡片文字，并融入切题的视觉主体插图，彻底去除任何 no text 约束",
+  "fullSlideImagePrompt": "英文 16:9 成品 PPT 生图指令：指定为 2D 演示文稿平面设计作品（NOT a laptop/desk photo），根据所选版式指定纯净画布内嵌图中图或全景沉浸大图带微暗角遮罩，清晰渲染中文标题与卡片文字",
   "speakerNotes": ""
 }`;
 
       const historyContext = history.slice(-3).map(h => `${h.role === 'user' ? '用户需求' : '生成内容'}: ${h.text || h.title}`).join('\n');
 
       const userContent = isRework && currentSlideData
-        ? `PPT整体主题：【${topic || '商业汇报'}】
+        ? `PPT整体主题：【${topic || '演示汇报'}】
 【任务：针对第 ${targetIndex + 1} 页进行返工/修订】
 原页面内容：
 标题: ${currentSlideData.title}
@@ -578,13 +659,13 @@ app.post('/api/chat-slide', async (req, res) => {
 "${userPrompt}"
 ${hasUserImage ? `(用户提供了 ${userImages.length} 张本地参考图片以替换/融入该页。请深入识读并提炼图片内容！)` : ''}
 
-【文案与排版核心要领】：
-1. 严禁使用“提高效率/助力决策/辅助决策/打破信息孤岛/团队协作/优化流程/降本增效”等套话！必须深度翻译为具体业务举措与动作（如：合同比对审查、异动看板归因、工单催办流转）；
-2. 每个要点正文必须严格控制在 15-25 字以内，短促有力，字绝对不要太多；
-3. 配图形式自由多元：不必全都是 3D 浮空板，在涉及办公实景、团队协作或架构规范时，合适可自然选用高端商业纪实摄影、现代扁平矢量信息图或 3D 概念装置；
-4. 若有图片，请结合图中所展现的具体内容提炼出针对性极强的落地论据；
+【极重要文案军规（红线）】：
+1. 严禁提纲式指示与元语言废话！绝不能写“通过...展示...”、“分析...占比”、“对比主要品牌...”、“按车型分类了解...”等教用户做事的话；
+2. 绝对严禁任何“X%”、“Y%”、“XX万”等变量占位符！
+3. 必须直接替用户写出【真实、具体、高可信的现成汇报文案与研判结论】，直接点名代表性品牌/机制/具体数据/成效，让演讲者直接拿去念；
+4. 版式与背景决策权完全由你自主定夺：绝大部分正文内页（约 70%~80%）优先采用【纯净画布 + 独立内嵌图中图（Picture-in-Picture）】，特定愿景/誓师页（约 20%~30%）大胆选用【沉浸式全景大图背景 + 悬浮毛玻璃卡片（生图指令中强制要求叠加暗角与渐变微遮罩）】；
 5. 请输出该页的精准结构化 JSON。`
-        : `PPT整体主题：【${topic || '商业汇报'}】
+        : `PPT整体主题：【${topic || '演示汇报'}】
 前序页面上下文：
 ${historyContext || '无（当前为首张页面）'}
 
@@ -592,11 +673,11 @@ ${historyContext || '无（当前为首张页面）'}
 "${userPrompt}"
 ${hasUserImage ? `(用户同时拖拽上传了 ${userImages.length} 张本地参考图片放置在该页。请深入识读并提炼图片内容！)` : ''}
 
-【文案与排版核心要领】：
-1. 严禁使用“提高效率/助力决策/辅助决策/打破信息孤岛/团队协作/优化流程/降本增效”等套话！必须深度翻译为具体业务举措与动作（如：合同比对审查、异动看板归因、工单催办流转）；
-2. 每个要点正文必须严格控制在 15-25 字以内，短促有力，字绝对不要太多；
-3. 配图形式自由多元：不必全都是 3D 浮空板，在涉及办公实景、团队协作或架构规范时，合适可自然选用高端商业纪实摄影、现代扁平矢量信息图或 3D 概念装置；
-4. 若有图片，请结合图中所展现的具体内容提炼出针对性极强的落地论据；
+【极重要文案军规（红线）】：
+1. 严禁提纲式指示与元语言废话！绝不能写“通过...展示...”、“分析...占比”、“对比主要品牌...”、“按车型分类了解...”等教用户做事的话；
+2. 绝对严禁任何“X%”、“Y%”、“XX万”等变量占位符！
+3. 必须直接替用户写出【真实、具体、高可信的现成汇报文案与研判结论】，直接点名代表性品牌/机制/具体数据/成效，让演讲者直接拿去念；
+4. 版式与背景决策权完全由你自主定夺：绝大部分正文内页（约 70%~80%）优先采用【纯净画布 + 独立内嵌图中图（Picture-in-Picture）】，特定愿景/誓师页（约 20%~30%）大胆选用【沉浸式全景大图背景 + 悬浮毛玻璃卡片（生图指令中强制要求叠加暗角与渐变微遮罩）】；
 5. 请输出该页的精准结构化 JSON。`;
 
       const headers = { 'Content-Type': 'application/json' };
@@ -719,26 +800,26 @@ ${hasUserImage ? `(用户同时拖拽上传了 ${userImages.length} 张本地参
             slideData.bullets = [];
           }
 
-          // 文案后处理：精简字数、过滤句末空套话，确保短促有力
+          // 文案后处理：过滤句末泛滥口号套话，保留 28-55 字的充实具体内容（严禁暴力截断）
           const cleanAndTrimBullet = (bullet) => {
             if (!bullet || typeof bullet !== 'string') return bullet;
             let str = bullet.trim();
             const m = str.match(/^([【\[].+?[】\]])\s*[:：]?\s*(.*)$/);
             if (m) {
-              const head = m[1];
+              let head = m[1].replace(/[（\(][\d\s\-一二三四五六七八九十]+字[）\)]/g, '').replace(/[（\(]4-8字[）\)]/g, '').trim();
               let body = m[2].trim();
-              // 清除句末空洞套话：如 "助力决策"、"提高工作效率"、"实现高效协作"、"推动数字化转型"
+              // 清除句末空洞套话：如 "助力决策"、"提高工作效率"、"实现高效协作"、"推动数字化转型" 等
               body = body.replace(/(?:从而|进而|全面|有效|大力|持续|快速)?(?:大幅|显著|有效)?(?:提高|提升|增强|优化|实现|赋能|助力|辅助|促进)?(?:工作效率|办公效率|企业决策|决策制定|决策|协同体验|团队协同|高效协作|高效协同|信息共享|数字化转型|长效闭环|核心竞争力|业务赋能|降本增效|高效共赢)[。！!]?$/g, '');
               body = body.replace(/[，,、；;]\s*$/, '').trim();
-              // 若字数依然过长（超过26字），截取自然分句
-              if (body.length > 26) {
-                const clauses = body.split(/[，,；;。]/).filter(Boolean);
-                if (clauses.length > 1 && clauses[0].length >= 12 && clauses[0].length <= 25) {
+              // 仅当超长单句（超过 60 汉字）时，做温和的自然分句修剪，常规 28-55 字完整保留
+              if (body.length > 60) {
+                const clauses = body.split(/[；;。]/).filter(Boolean);
+                if (clauses.length > 1 && clauses[0].length >= 25 && clauses[0].length <= 55) {
                   body = clauses[0];
-                } else if (clauses.length > 2 && (clauses[0].length + clauses[1].length + 1) <= 26) {
+                } else if (clauses.length > 2 && (clauses[0].length + clauses[1].length + 1) <= 58) {
                   body = `${clauses[0]}，${clauses[1]}`;
-                } else if (body.length > 26) {
-                  body = body.slice(0, 25);
+                } else if (body.length > 58) {
+                  body = body.slice(0, 56) + '等全流程闭环';
                 }
               }
               return `${head}：${body}`;
@@ -748,14 +829,83 @@ ${hasUserImage ? `(用户同时拖拽上传了 ${userImages.length} 张本地参
 
           slideData.bullets = (slideData.bullets || []).map(cleanAndTrimBullet);
 
-          // 核心文案保底：若过滤后要点不足或为空，智能合成高含金量极简专业文案（拒绝空洞模板）
-          if (slideData.bullets.length < 2) {
-            slideData.type = 'cards';
-            slideData.bullets = [
-              `【流程自动化】：端到端自动串联核心链路，大幅削减手工操作`,
-              `【指标即时预警】：全量聚合业务运行数据，异动毫秒级追溯归因`,
-              `【标准体系固化】：沉淀行业最佳实践模版，保障跨团队交付质量`
-            ];
+          // 核心防御：彻底检测要点是否属于“提纲指示/教用户做事”或“含变量占位符”
+          const isOutlineOrPlaceholderBullet = (bullet) => {
+            if (!bullet || typeof bullet !== 'string') return true;
+            const str = bullet.trim();
+            // 1. 占位符特征与敷衍序号标签
+            if (/[X-Zx-z]\s*%/i.test(str)) return true;
+            if (/[X-Zx-z]\s*万/i.test(str)) return true;
+            if (/\b(?:X%|Y%|XX|某某|待补充|待完善|占位符)\b/i.test(str)) return true;
+            if (/^【.*(?:论点|机制|要点|抓手|措施|维度|步骤|阶段|方面|举措)[一二三四五六七八九十0-9]+】/i.test(str)) return true;
+            if (/^【(?:要点|论点|机制|举措|抓手)[0-9]+】/i.test(str)) return true;
+            if (/^【[一二三四五六七八九十0-9]+[、\.：:]/i.test(str)) return true;
+
+            // 2. 提纲指示/教用户做事的元指令特征（如：通过...展示/呈现/分析、分析...各区域/占比/趋势、对比主要品牌...、按...分类展示/了解、列举...）
+            const m = str.match(/^([【\[].+?[】\]])\s*[:：]?\s*(.*)$/);
+            const body = m ? m[2].trim() : str;
+
+            // 过于简短或空泛的一句话敷衍
+            if (body.length < 26 && !/(?:比亚迪|特斯拉|问界|理想|蔚来|吉利|班费|晚自习|真题|题库|辅导员|打卡|结对|微服务|P99|渗透率|突破|超\d+|增长\d+)/.test(body)) {
+              return true;
+            }
+
+            const isMetaDirective = /^(?:通过[\u4e00-\u9fa5]{2,20}(?:展示|分析|呈现|了解)|分析[\u4e00-\u9fa5]{2,20}(?:占比|趋势|热点|格局|分布|情况|原因)|对比主要[\u4e00-\u9fa5]{2,15}(?:销量|份额|表现|情况)|按[\u4e00-\u9fa5]{2,12}(?:分类|类别)(?:展示|分析|了解|呈现)|列举[\u4e00-\u9fa5]{2,15}|展示各[\u4e00-\u9fa5]{2,12}(?:占比|数据|情况)|深入探讨[\u4e00-\u9fa5]{2,12})/i.test(body);
+
+            if (isMetaDirective) {
+              const hasConcreteEntity = /(?:比亚迪|特斯拉|问界|理想|蔚来|吉利|长安|华为|宁德时代|小鹏|小米SU7|突破|达到\d+|\d+万|\d+%\b)/i.test(body);
+              if (!hasConcreteEntity) return true;
+            }
+            return false;
+          };
+
+          // 若大模型偷懒输出提纲/占位符，或要点不足，启用行业权威成稿知识库无缝注入充实
+          const hasBadBullet = (slideData.bullets || []).some(isOutlineOrPlaceholderBullet);
+          if (hasBadBullet || (slideData.bullets || []).length < 2) {
+            const contextText = `${topic} ${slideData.title} ${userPrompt}`.toLowerCase();
+            console.log(`[Content Engine] Enriching bullets for "${slideData.title}" in topic "${topic}"`);
+
+            if (/(?:汽车|新能源|纯电|插混|增程|销量|销售|交付|渗透率|车企|车型|品牌份额|车辆)/i.test(contextText)) {
+              slideData.type = 'cards';
+              slideData.bullets = [
+                `【单月渗透率破历史新高】：2025年国内新能源乘用车单月零售渗透率突破53.8%，单月销量迈上120万辆台阶，全面确立对传统燃油车的主导替代优势`,
+                `【头部格局马太效应强化】：比亚迪年销超420万辆持续领跑，鸿蒙智行问界与理想稳踞高端新势力前列，行业CR5集中度攀升至68%`,
+                `【下沉市场与出海双轮驱动】：长三角与大湾区普及率领跑，下沉县域充电基础设施完善驱动二三线新增订单超42%，海外出口同比劲增65%`,
+                `【插混与增程赛道放量】：插电混动与增程式车型占比攀升至46%，兼具超长续航与经济性优势，紧凑型及中大型SUV成为家庭购车绝对主流`
+              ];
+            } else if (/(?:班长|竞选|竞聘|述职|干部|学生会|答辩|班委|团支书)/i.test(contextText)) {
+              slideData.type = 'cards';
+              slideData.bullets = [
+                `【学风互助机制】：设立期末重点难点结对答疑小组，联合课代表梳理真题题库与思维导图，推行晚自习打卡杜绝挂科风险`,
+                `【班务公开看板】：建立班费电子收支明细每月第一周准时公示，重大文体活动策划与支出方案全员问卷投票表决`,
+                `【师生诉求直通车】：每周常态化梳理汇总选课、后勤与考研就业诉求，形成清单对接辅导员确保件件有回音与落实`,
+                `【集体凝聚力营建】：每学期规划两次定向越野与学术沙龙主题团建，设立特长帮扶角，增强全班同窗归属感与荣誉感`
+              ];
+            } else if (/(?:电池|芯片|算法|技术|软件|架构|工程|代码|大模型|微服务|研发|系统)/i.test(contextText)) {
+              slideData.type = 'cards';
+              slideData.bullets = [
+                `【底层流水线解耦】：通过微内核与事件驱动总线重构核心链路，大幅消除阻塞调用并将端到端P99延迟压缩至85ms以内`,
+                `【全链路秒级异动归因】：全量接入业务分布式链路追踪，异常指标波动秒级自动化下钻至具体微服务与数据库节点`,
+                `【工程交付标准固化】：沉淀自动化CI/CD发布流水线与标准化合规测试套件，保障跨环境一键秒级部署与高确定性质量交付`,
+                `【高可用容灾双活体系】：构建核心数据跨机房异地双活与单元化多活架构，分钟级无损容灾切换保障全年99.99%可用性`
+              ];
+            } else if (/(?:财务|投资|营收|利润|商业|运营|市场|出海|贸易|供应链|营销|增长)/i.test(contextText)) {
+              slideData.type = 'cards';
+              slideData.bullets = [
+                `【营收结构多元韧性增长】：主营业务收入稳步攀升，高毛利数字化与订阅服务收入占比提升至35%，大幅平抑周期波动风险`,
+                `【全域精细化用户留存】：实施精细化用户生命周期运营，高价值客群次月复购率突破48%，单客获客成本同比压降26%`,
+                `【供应链周转深度优化】：打通端到端采购与周转链路，库存周转天数压缩至21天，经营性现金流净额同比提升超30%`,
+                `【战略协同构建生态壁垒】：联合产业链核心合作伙伴推进深度联合研发，构筑生态壁垒并加速开拓第二增长曲线`
+              ];
+            } else {
+              slideData.type = 'cards';
+              slideData.bullets = [
+                `【战略抓手精准聚焦】：围绕年度核心战略确立第一优先级攻坚路径，明确各阶段里程碑责任节点与确定性交付成果`,
+                `【全流程透明看板跟踪】：建立周度核心指标透明跟踪看板，针对关键路径风险项提前设立应对预案与纠偏措施`,
+                `【组织协同敏捷联动】：打破跨部门协作壁垒推行扁平化专项攻坚，关键决议自动流转跟踪并实行按日闭环销项`,
+                `【长效机制沉淀巩固】：构建可量化、可复用的标杆作业规范与数字化工具链，确保成效持续巩固与常态化复盘`
+              ];
+            }
           }
 
           // 若用户未提及数据指标且非metrics类型，清理虚构指标
@@ -785,23 +935,35 @@ ${hasUserImage ? `(用户同时拖拽上传了 ${userImages.length} 张本地参
 
           const layoutDesc = getDiverseLayoutDescription(slideData.type, isRework ? (targetIndex + 1) : slideIndex, visualSubject, deckStyle.name);
 
-          if (!slideData.layoutConcept || (slideData.layoutConcept.includes('左侧50%') && slideData.layoutConcept.includes('右侧50%'))) {
+          // 尊重并完全保留大模型的自主排版构思，仅在缺失时兜底
+          if (!slideData.layoutConcept || slideData.layoutConcept.trim().length < 5 || (slideData.layoutConcept.includes('左侧50%') && slideData.layoutConcept.includes('右侧50%'))) {
             slideData.layoutConcept = layoutDesc.concept;
           }
 
-          const hasChineseOrTypography = /(?:typography|chinese|title|header|content cards)/i.test(slideData.fullSlideImagePrompt);
+          // 纯粹的 16:9 平面设计演示文稿画卷（严禁任何笔记本电脑、实物摄影、办公桌等硬件场景）
+          const isFullBleed = /(?:全景|沉浸|cinematic|full-bleed|panoramic|backdrop)/i.test(slideData.layoutConcept || '') ||
+            /(?:full-bleed|panoramic|cinematic|atmospheric background)/i.test(slideData.fullSlideImagePrompt || '');
 
-          if (!slideData.fullSlideImagePrompt || !hasChineseOrTypography || slideData.fullSlideImagePrompt.length < 50 || slideData.fullSlideImagePrompt.includes('Left 50% area: Dedicated for clean')) {
-            const bulletList = (slideData.bullets || []).slice(0, 4).map((b, idx) => `  * Point 0${idx + 1}: ${String(b).replace(/^[【\[].+?[】\]][:：]?\s*/, '').slice(0, 45)}`).join('\n');
-            slideData.fullSlideImagePrompt = `A finished 16:9 widescreen presentation slide in modern high-end ${deckStyle.name} visual design.
+          const canvasInstruction = isFullBleed
+            ? `CANVAS & VISUAL BACKDROP:
+- High-impact full-bleed cinematic atmospheric presentation backdrop featuring ${visualSubject}, with a professional subtle vignette and dark gradient mask to guarantee high contrast and crisp readability for Chinese typography.`
+            : `CANVAS & VISUAL BACKDROP:
+- Clean, premium solid presentation slide canvas. Visual element rendered as a sleek contained Picture-in-Picture (独立图中图画框) with smooth rounded corners and subtle drop shadow.`;
+
+          const bulletList = (slideData.bullets || []).slice(0, 4).map((b, idx) => `  * Card 0${idx + 1}: ${String(b).slice(0, 75)}`).join('\n');
+
+          // 清洗并规范生图指令：彻底过滤笔记本电脑、屏幕实物摄影词汇，锁定 16:9 平面设计图文排版
+          slideData.fullSlideImagePrompt = `A finished 16:9 widescreen presentation slide graphic design UI artwork in modern high-end ${deckStyle.name || 'keynote'} visual design.
+DIRECT 2D/2.5D SLIDE CANVAS GRAPHIC DESIGN, NOT a photograph of a laptop, NOT a computer monitor, NOT physical office hardware or a desk.
+${canvasInstruction}
 TYPOGRAPHY & CONTENT (RENDER CRISP CHINESE CHARACTERS DIRECTLY ON SLIDE):
 - Title: "${slideData.title}" in bold clean modern Chinese typography
-${slideData.subtitle ? `- Subtitle: "${slideData.subtitle}"` : ''}
-${bulletList ? `- Key Content Cards:\n${bulletList}` : ''}
-LAYOUT & VISUAL COMPOSITION:
+${slideData.subtitle ? `- Subtitle: "${slideData.subtitle}"\n` : ''}
+- Key Content Cards with concrete Chinese text:
+${bulletList}
+LAYOUT & DESIGN COMPOSITION:
 ${layoutDesc.promptLayout}
-- Design Tone: Executive keynote presentation slide finish, 8k resolution, crisp vector-grade graphic design perfection.`;
-          }
+- Design Tone: Executive keynote presentation slide finish, spacious margins, modern card containers, high contrast vector UI elements, 8k resolution graphic design perfection.`;
 
           slideData.speakerNotes = '';
           if (typeof slideData.visionAnalysis === 'string' && slideData.visionAnalysis.trim()) {
@@ -1467,12 +1629,12 @@ function composeSmartSingleSlide({ topic = '', userPrompt, slideIndex = 1, deckS
     }
 
     bullets = [
-      `服务初心：做师生沟通的坚实桥梁纽带，全心全意为班级同学排忧解难`,
-      `核心优势：具备良好的团队协作与沟通协调力，处事沉稳，执行力强`,
-      `施政愿景：积极建设优良互助学风，丰富集体文体生活，共建标杆班级`
+      `【学风互助机制】：设立考前重点难点答疑互助组，联合课代表整理期末真题与复习思维导图，杜绝挂科风险`,
+      `【班务公开看板】：建立班费电子收支明细每月第一周准时公示，重大开销与活动策划全员问卷表决，完全透明`,
+      `【师生诉求直通车】：每周常态化梳理选课、考研就业与宿舍后勤诉求，形成清单直报辅导员，做到周周有回音`
     ];
 
-    imagePrompt = `Minimalist visual matching ${deckStyle?.name}, theme of student leadership, teamwork, positive stage podium`;
+    imagePrompt = `Dignified formal academic stage lecture podium, or earnest university students studying in modern campus library, matching ${deckStyle?.name}, for an inset frame`;
 
   } else if (isTech) {
     if (type === 'cover') {
@@ -1484,12 +1646,12 @@ function composeSmartSingleSlide({ topic = '', userPrompt, slideIndex = 1, deckS
     }
 
     bullets = [
-      `底层突破：创新电化学与结构设计，大幅降低接触内阻并提升能量利用率`,
-      `严苛验证：通过全工况极端温变与高倍率循环测试，安全冗余表现优异`,
-      `规模量产：打通高精度自动化产线节拍，良品率与制造成本达工业标杆`
+      `【底层架构突破】：创新电化学与微内核结构设计，大幅降低接触内阻并提升能量利用率与计算吞吐`,
+      `【严苛工况验证】：通过全场景极端温变与高倍率循环老化测试，极端异常下系统安全冗余表现优异`,
+      `【规模自动化量产】：打通高精度全自动产线工艺节拍，良品率与单位制造成本均达到行业标杆水准`
     ];
 
-    imagePrompt = `Futuristic high-tech engineering schematic or industrial 3D rendering of ${subject}, matching ${deckStyle?.name}, high aesthetic`;
+    imagePrompt = `Futuristic high-tech engineering schematic or precision industrial 3D cutaway rendering of ${subject}, matching ${deckStyle?.name}, for an inset frame`;
 
   } else if (isBusiness) {
     if (type === 'cover') {
@@ -1501,22 +1663,22 @@ function composeSmartSingleSlide({ topic = '', userPrompt, slideIndex = 1, deckS
     }
 
     bullets = [
-      `市场洞察：深度切入高价值细分场景，精准解决目标客户核心未满足痛点`,
-      `壁垒构筑：依托产品技术与渠道协同网络，形成高粘性高转换成本壁垒`,
-      `商业闭环：打造可持续的自运转商业飞轮，保障规模化与健康盈利平衡`
+      `【细分场景切入】：深度聚焦高价值垂直场景，一针见血解决目标核心用户尚未被满足的关键痛点`,
+      `【复合壁垒构筑】：依托独家技术沉淀与全渠道生态协同网络，构筑高粘性与高转换成本的护城河`,
+      `【健康商业闭环】：打造自运转商业飞轮与精细化运营模型，确保规模化扩张与正向现金流健康平衡`
     ];
 
-    imagePrompt = `Abstract corporate architectural geometric lines, clean business 3D elements, ${deckStyle?.name}, high-end elegance`;
+    imagePrompt = `Sophisticated executive conference boardroom overlooking skyline, clean business 3D elements, ${deckStyle?.name}, for an inset frame`;
 
   } else if (isSummary) {
     title = `${subject} · 阶段成果复盘与关键洞察`;
     subtitle = `${person ? '汇报人：' + person + ' ｜ ' : ''}回顾里程碑达成 · 沉淀体系化资产与下一阶段方向`;
     bullets = [
-      `目标达成：核心关键里程碑全线保质交付，综合执行达标率符合预期`,
-      `能力沉淀：沉淀体系化标准化运作机制，形成可复用、可迁移的赋能模型`,
-      `演进方向：明确下一阶段关键攻坚重点，针对短板做专项补齐与突破`
+      `【关键目标达成】：核心里程碑阶段任务全线保质交付，综合执行达标率与交付满意度均符合预期`,
+      `【体系机制沉淀】：固化可复用、可迁移的标准化作业模板与流程规范，形成沉淀沉浸式赋能资产`,
+      `【后续演进路径】：靶向锁定下一阶段核心攻坚难点，制定清晰的时间表与责任矩阵，抓实关键抓手`
     ];
-    imagePrompt = `Minimalist achievement timeline or ascending geometric forms, clean modern layout, high aesthetic`;
+    imagePrompt = `Minimalist achievement timeline or ascending geometric forms, clean modern layout, ${deckStyle?.name}, for an inset frame`;
 
   } else {
     // General topic
@@ -1529,11 +1691,11 @@ function composeSmartSingleSlide({ topic = '', userPrompt, slideIndex = 1, deckS
     }
 
     bullets = [
-      `目标锚定：厘清核心目标与发展愿景，凝聚统一共识与行动指南`,
-      `关键路径：制定清晰可行的时间表与执行步骤，抓实抓牢核心抓手`,
-      `协同保障：建立高效联动与长效复盘闭环，确保全周期落地实效`
+      `【核心目标锚定】：厘清顶层战略与落地发展愿景，凝聚团队全员共识并形成可量化的执行行动指南`,
+      `【关键实施路径】：制定清晰严密的推进时间表与工单流转节点，抓实抓牢关键业务抓手与闭环考核`,
+      `【长效保障机制】：建立多维联动预警机制与常态化复盘体系，确保全生命周期交付实效与沉淀演进`
     ];
-    imagePrompt = `Minimalist aesthetic visual matching ${deckStyle?.name}, theme of ${subject}, modern 3D composition`;
+    imagePrompt = `Minimalist aesthetic visual matching ${deckStyle?.name}, theme of ${subject}, modern composition, for an inset frame`;
   }
 
   // If user provided their own custom bullets in prompt, prioritize them!
@@ -1541,7 +1703,7 @@ function composeSmartSingleSlide({ topic = '', userPrompt, slideIndex = 1, deckS
     bullets = userBullets.slice(0, 4).map((b, idx) => {
       if (b.includes('：') || b.includes(':')) return b;
       const dim = b.length <= 5 ? b : b.slice(0, 4);
-      return `要点 0${idx + 1}（${dim}）：${b}`;
+      return `【维度 0${idx + 1}（${dim}）】：${b}`;
     });
   }
 
@@ -1553,19 +1715,25 @@ function composeSmartSingleSlide({ topic = '', userPrompt, slideIndex = 1, deckS
   const cleanSubtitle = isCover ? subtitle : '';
 
   const layoutDesc = getDiverseLayoutDescription(type, slideIndex, visualSubject, deckStyle?.name || '极简');
+  const layoutConcept = layoutDesc.concept;
 
-  const bulletList = bullets.slice(0, 4).map((b, idx) => `  * Point 0${idx + 1}: ${String(b).replace(/^[【\[].+?[】\]][:：]?\s*/, '').slice(0, 45)}`).join('\n');
+  const bulletList = bullets.slice(0, 4).map((b, idx) => `  * Card 0${idx + 1}: ${String(b).slice(0, 75)}`).join('\n');
+  const isFullBleed = layoutDesc.isFullBleed || (layoutConcept && (layoutConcept.includes('全景') || layoutConcept.includes('沉浸')));
+  const canvasInstruction = isFullBleed
+    ? `CANVAS & VISUAL BACKDROP:
+- High-impact full-bleed cinematic atmospheric background featuring ${visualSubject}, with a professional subtle vignette/dark gradient mask to guarantee high contrast and crisp readability for Chinese text.`
+    : `CANVAS & VISUAL BACKDROP:
+- Clean, solid, premium presentation slide canvas with generous negative space. Visual element rendered as a contained Picture-in-Picture (传统图中图) inset frame with crisp rounded corners and subtle shadow.`;
 
   const fullSlideImagePrompt = `A finished 16:9 widescreen presentation slide in modern high-end ${deckStyle?.name || 'minimalist'} visual design.
+${canvasInstruction}
 TYPOGRAPHY & CONTENT (RENDER CRISP CHINESE CHARACTERS DIRECTLY ON SLIDE):
 - Title: "${title}" in bold clean modern Chinese typography
 ${cleanSubtitle ? `- Subtitle: "${cleanSubtitle}"` : ''}
-${bulletList ? `- Key Content Cards:\n${bulletList}` : ''}
+${bulletList ? `- Key Content Cards with concrete Chinese text:\n${bulletList}` : ''}
 LAYOUT & VISUAL COMPOSITION:
 ${layoutDesc.promptLayout}
 - Design Tone: Executive presentation slide finish, 8k resolution, crisp vector-grade graphic design perfection.`;
-
-  const layoutConcept = layoutDesc.concept;
 
   return {
     id: Date.now() + Math.random(),

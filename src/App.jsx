@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import ChatPanel from './components/ChatPanel';
 import SlideViewer from './components/SlideViewer';
+import SlideProgressRail from './components/SlideProgressRail';
 import OutlineEditor from './components/OutlineEditor';
 import SettingsModal from './components/SettingsModal';
 import DeckInitModal from './components/DeckInitModal';
@@ -19,6 +20,7 @@ export default function App() {
   });
   const [messages, setMessages] = useState([]);
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [reworkTarget, setReworkTarget] = useState(null);
   const [generatingImageIndex, setGeneratingImageIndex] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -146,20 +148,29 @@ ${visionSection}${conceptSection}${bulletsSection}💡 **请您审阅并决定**
           return { ...prev, slides: newSlides };
         });
         setActiveSlideIndex(slideIndex);
+        setIsViewerOpen(true);
 
-        const isFallback = Boolean(res.isPlaceholder);
         setMessages(prev => [
           ...prev,
           {
             role: 'assistant',
-            text: isFallback
-              ? `⚠️ **第 ${slideIndex + 1} 页已匹配高质感留白兜底画面**\n\n> **接口提示**：${res.errorReason || '当前生图服务未成功返回有效图像'}。\n> 系统已为您自动填充符合设计规范的极简背景。若您使用的是第三方中转代理，可在设置中检查配置。`
-              : `🎨 **第 ${slideIndex + 1} 页已由 GPT 渲染生成整张 16:9 完整 PPT 画面！**\n\n已自动嵌入右侧演示画布。若满意可继续交代下一页内容，若想修改也可随时提出！`,
+            text: `🎨 **第 ${slideIndex + 1} 页已由 GPT 渲染生成整张 16:9 完整 PPT 画面！**\n\n已自动嵌入右侧演示画卷。若满意可继续交代下一页内容，若想修改也可随时提出！`,
             slideIndex: slideIndex + 1
           }
         ]);
 
-        showToast(isFallback ? `已为第 ${slideIndex + 1} 页匹配设计感背景` : `第 ${slideIndex + 1} 页完整 PPT 画面已由 GPT 渲染完成！`);
+        showToast(`第 ${slideIndex + 1} 页完整 PPT 画面已由 GPT 渲染完成！`);
+      } else {
+        const errorReason = res?.errorReason || '生图服务未能成功返回画面';
+        setMessages(prev => [
+          ...prev,
+          {
+            role: 'assistant',
+            text: `⚠️ **第 ${slideIndex + 1} 页生图未成功**\n\n> **接口提示**：${errorReason}。\n> 本次调用未扣减您的生图额度。您可在右上角设置中检查 API 配置，或稍后点击按钮重新渲染。`,
+            slideIndex: slideIndex + 1
+          }
+        ]);
+        showToast(`生图未成功: ${errorReason}`);
       }
     } catch (err) {
       console.error('Failed to generate image:', err);
@@ -379,9 +390,12 @@ ${visionSection}${conceptSection}${bulletsSection}💡 **请您审阅并决定**
     });
   };
 
-  const handleSelectSlide = (index) => {
+  const handleSelectSlide = (index, shouldOpenViewer = false) => {
     setActiveSlideIndex(index);
-    setReworkTarget(index); // 用户在右下缩略图或画布点到哪一面，AI 就默认当前修改那一面
+    setReworkTarget(index);
+    if (shouldOpenViewer) {
+      setIsViewerOpen(true);
+    }
   };
 
   const handleRequestRework = (index) => {
@@ -432,6 +446,14 @@ ${visionSection}${conceptSection}${bulletsSection}💡 **请您审阅并决定**
         isExporting={isExporting}
         hasSlides={Boolean(presentation && presentation.slides.length > 0)}
         onEnterFullscreen={() => setIsFullscreen(true)}
+        onNewDeck={() => {
+          if (window.confirm('确认重新开始并创建新演示文稿吗？当前内容若未导出将重置。')) {
+            setPresentation(null);
+            setMessages([]);
+            setReworkTarget(null);
+            setIsViewerOpen(false);
+          }
+        }}
       />
 
       {/* Main Workspace */}
@@ -442,77 +464,61 @@ ${visionSection}${conceptSection}${bulletsSection}💡 **请您审阅并决定**
             <DeckInitModal onStartDeck={handleStartDeck} isLoading={isLoading} />
           </div>
         ) : (
-          /* Step 1 & 2: Split-Screen Conversational Interactive Workspace */
-          <div className="flex-1 flex flex-col md:flex-row w-full h-[calc(100vh-57px)] overflow-hidden">
-            {/* Left: Conversational Chat Panel with Drag & Drop */}
-            <ChatPanel
-              deckStyle={deckStyle}
-              messages={messages}
-              onSendMessage={handleSendMessage}
-              isLoading={isLoading}
-              currentSlideCount={presentation.slides.length}
-              onSelectSlide={handleSelectSlide}
-              activeSlideIndex={activeSlideIndex}
-              activeSlide={presentation.slides[activeSlideIndex]}
-              slides={presentation.slides}
-              reworkTarget={reworkTarget}
-              onSetReworkTarget={setReworkTarget}
-              onTriggerImageGen={handleGenerateImageForSlide}
-              generatingImageIndex={generatingImageIndex}
-            />
+          /* Step 1 & 2: Chat-First Interactive Workspace with Docked Slide Progress Rail */
+          <div className="flex-1 flex flex-col w-full h-[calc(100vh-57px)] overflow-hidden">
+            {/* Top Workspace Area: Chat (full-width by default) + SlideViewer (revealed when user clicks) */}
+            <div className="flex-1 flex flex-col md:flex-row w-full overflow-hidden min-h-0">
+              {/* Conversational Chat Panel */}
+              <ChatPanel
+                deckStyle={deckStyle}
+                messages={messages}
+                onSendMessage={handleSendMessage}
+                isLoading={isLoading}
+                currentSlideCount={presentation.slides.length}
+                onSelectSlide={handleSelectSlide}
+                activeSlideIndex={activeSlideIndex}
+                activeSlide={presentation.slides[activeSlideIndex]}
+                slides={presentation.slides}
+                reworkTarget={reworkTarget}
+                onSetReworkTarget={setReworkTarget}
+                onTriggerImageGen={handleGenerateImageForSlide}
+                generatingImageIndex={generatingImageIndex}
+                isViewerOpen={isViewerOpen}
+                onOpenViewer={(idx) => {
+                  if (typeof idx === 'number') setActiveSlideIndex(idx);
+                  setIsViewerOpen(true);
+                }}
+                onCloseViewer={() => setIsViewerOpen(false)}
+              />
 
-            {/* Right: Real-time 16:9 Slide Canvas & Thumbnail Rail */}
-            <div className="flex-1 flex flex-col p-4 sm:p-6 overflow-y-auto bg-[#07080A]">
-              {/* Workspace Top Toolbar */}
-              <div className="flex items-center justify-between pb-3 mb-2 border-b border-neutral-800/60">
-                <div className="flex items-center space-x-2">
-                  <span className="text-xs font-semibold text-white truncate max-w-xs">
-                    {presentation.title}
-                  </span>
-                  <span className="text-[10px] text-emerald-400 bg-emerald-950/60 border border-emerald-800/40 px-2 py-0.5 rounded-full flex items-center space-x-1">
-                    <Lock className="w-2.5 h-2.5" />
-                    <span>风格锁定中</span>
-                  </span>
+              {/* Right: 16:9 GPT Image Viewer (Hidden during conversation, revealed on user click) */}
+              {isViewerOpen && (
+                <div className="flex-1 w-full md:w-[52%] lg:w-[54%] xl:w-[56%] flex flex-col bg-[#07080A] border-l border-neutral-800/80 overflow-hidden animate-in slide-in-from-right-3 duration-200">
+                  <SlideViewer
+                    presentation={presentation}
+                    activeSlideIndex={activeSlideIndex}
+                    onSelectSlide={handleSelectSlide}
+                    onClose={() => setIsViewerOpen(false)}
+                    currentTheme={deckStyle.theme || 'dark'}
+                    isFullscreen={isFullscreen}
+                    onExitFullscreen={() => setIsFullscreen(false)}
+                    onTriggerImageGen={handleGenerateImageForSlide}
+                    generatingImageIndex={generatingImageIndex}
+                  />
                 </div>
-
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => {
-                      if (window.confirm('确认重新开始并创建新演示文稿吗？当前内容若未导出将重置。')) {
-                        setPresentation(null);
-                        setMessages([]);
-                        setReworkTarget(null);
-                      }
-                    }}
-                    className="flex items-center space-x-1 text-xs text-neutral-400 hover:text-white px-2.5 py-1 rounded-lg border border-neutral-800 hover:bg-neutral-800 transition"
-                    title="创建新 PPT"
-                  >
-                    <RotateCcw className="w-3 h-3" />
-                    <span>新建演示</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Slide Canvas */}
-              <div className="flex-1 flex flex-col justify-center max-w-5xl mx-auto w-full">
-                <SlideViewer
-                  presentation={presentation}
-                  activeSlideIndex={activeSlideIndex}
-                  onSelectSlide={handleSelectSlide}
-                  onUpdateSlide={handleUpdateSlide}
-                  onAddSlide={handleAddSlide}
-                  onDeleteSlide={handleDeleteSlide}
-                  currentTheme={deckStyle.theme || 'dark'}
-                  isFullscreen={isFullscreen}
-                  onExitFullscreen={() => setIsFullscreen(false)}
-                  onRequestRework={handleRequestRework}
-                  onGenerateFirstSlide={handleGenerateFirstSlide}
-                  deckStyle={deckStyle}
-                  onTriggerImageGen={handleGenerateImageForSlide}
-                  generatingImageIndex={generatingImageIndex}
-                />
-              </div>
+              )}
             </div>
+
+            {/* Bottom Dock: Slide Indicator & Progress Rail (第二张图升级: 明确指示哪一页已完成生图) */}
+            <SlideProgressRail
+              slides={presentation.slides}
+              activeSlideIndex={activeSlideIndex}
+              onSelectSlide={handleSelectSlide}
+              onAddSlide={handleAddSlide}
+              generatingImageIndex={generatingImageIndex}
+              isViewerOpen={isViewerOpen}
+              onToggleViewer={() => setIsViewerOpen(prev => !prev)}
+            />
           </div>
         )}
       </main>
