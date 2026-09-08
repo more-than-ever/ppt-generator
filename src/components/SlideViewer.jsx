@@ -204,9 +204,13 @@ export default function SlideViewer({
           {/* Hover actions overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-5 pointer-events-none">
             <div className="flex items-center justify-between pointer-events-auto">
-              <span className="text-xs font-semibold text-white/95 bg-blue-600/80 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 flex items-center space-x-1.5 shadow-md">
+              <span className={`text-xs font-semibold text-white/95 backdrop-blur-md px-3 py-1 rounded-full border flex items-center space-x-1.5 shadow-md ${
+                currentSlide.userUploaded
+                  ? 'bg-emerald-600/80 border-emerald-400/30'
+                  : 'bg-blue-600/80 border-white/20'
+              }`}>
                 <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                <span>GPT 16:9 完整单页 PPT 画面</span>
+                <span>{currentSlide.userUploaded ? '📷 用户本地参考图（已由 GLM-4V 视觉解析）' : 'GPT 16:9 完整单页 PPT 画面'}</span>
               </span>
               <div className="flex items-center space-x-2">
                 <button

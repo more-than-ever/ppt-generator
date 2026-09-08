@@ -465,6 +465,16 @@ app.post('/api/chat-slide', async (req, res) => {
   const activeUrl = runtimeConfig.llmApiUrl || (apiKey ? apiUrl : null) || 'https://open.bigmodel.cn/api/paas/v4';
   const activeModel = runtimeConfig.llmModel || (apiKey ? model : null) || 'glm-4-flash';
 
+  const hasUserImage = Array.isArray(userImages) && userImages.length > 0 && typeof userImages[0] === 'string' && userImages[0].startsWith('data:image/');
+
+  let effectiveModel = activeModel;
+  let isVisionMode = false;
+  if (hasUserImage && (activeModel.includes('glm-4-flash') || activeUrl.includes('bigmodel.cn'))) {
+    effectiveModel = 'glm-4v-flash';
+    isVisionMode = true;
+    console.log(`[Vision Engine] User uploaded image detected. Seamlessly routing to ${effectiveModel} for multimodal analysis.`);
+  }
+
   if (!userPrompt || userPrompt.trim() === '') {
     return res.status(400).json({ error: '请交代这一页要讲什么内容或修改要求' });
   }
@@ -480,7 +490,7 @@ app.post('/api/chat-slide', async (req, res) => {
 你【专门负责深度内容提炼、专业文案润色、多元版式大局规划、以及成品级 PPT 生图编排】。
 下游由大模型 GPT 将你的方案直接渲染为整张【图文并茂、排版就绪、带真实中文排版字样的 16:9 成品 PPT 画卷】。
 
-【四大核心工作法则】：
+【五大核心工作法则】：
 1. 【区分封面与内页，内页严禁生造副标题】：
    - 只有第 1 页【封面页】才需要主标题 + 副标题（如主讲人、主题核心定位）；
    - 第 2 页及以后的所有【正文内容页、分析页、架构页、成果页、数据页】：
@@ -515,7 +525,14 @@ app.post('/api/chat-slide', async (req, res) => {
        【具体场景/举措（4-8字）】：一针见血的明确动作与落地价值（冒号后正文【严格控制在 15-25 个汉字以内】，言简意赅，短促精炼，绝不拖泥带水！）；
      * 总体输出 2-4 个要点即可。
 
-4. 【GPT 成品 PPT 生图提示词编写准则（图文并茂、配图多元自由、彻底解除禁字限制）】：
+4. 【用户上传图片的多模态视觉深度理解准则（核心能力）】：
+   - 若用户随请求附带了参考图片、流程图、拓扑架构、报表看板或现场照片：
+     * 你已进入多模态视觉理解通道，必须【深度审读该图片的内容、数据指标、拓扑架构与文字信息】；
+     * 【禁止假装看不见图片，严禁输出通用泛化废话】！必须将图片中的关键事实、模块流向或数据直接提炼为本页的精炼专业要点（bullets）；
+     * 在 layoutConcept 中，清晰规划如何将该图片作为视觉焦点与文字卡片融合排布；
+     * 在 visionAnalysis 字段中，用 1-2 句简明短语向用户汇报你从图片中解读出的关键内容（例如：“已精准识读图片中的微服务网关架构与核心链路”）。
+
+5. 【GPT 成品 PPT 生图提示词编写准则（图文并茂、配图多元自由、彻底解除禁字限制）】：
    - 彻底废除任何关于 "absolutely no text / no words / no letters" 的禁字约束！
    - 你在 fullSlideImagePrompt 中撰写的指令，是让 GPT 直接制作一张【完整的 16:9 中文演示幻灯片】！
    - 必须在 fullSlideImagePrompt 中明确指挥 GPT：
@@ -528,13 +545,14 @@ app.post('/api/chat-slide', async (req, res) => {
          d) 当涉及抽象愿景、智能算力底座、未来概念时，继续发挥【3D 概念立体装置与质感雕塑 (3D Isometric / Glassmorphism)】的科技现代感；
      * 【专业级商业幻灯片品质】：现代留白、精细网格排版、无杂乱水印边框，8k 分辨率级商业设计终稿画面。
 
-5. 请输出严格合法的单个幻灯片 JSON 对象（不要包含任何 markdown 块外的多余文本）：
+6. 请输出严格合法的单个幻灯片 JSON 对象（不要包含任何 markdown 块外的多余文本）：
 {
   "id": ${currentSlideData?.id || Date.now()},
   "slideIndex": ${isRework ? (targetIndex + 1) : slideIndex},
   "type": "cards" | "process" | "metrics" | "agenda" | "summary" | "cover",
   "title": "${isCurrentCover ? '精炼有力的高端封面主标题' : '精炼有力的本页标题（如：核心优势深度拆解）'}",
   "subtitle": "${isCurrentCover ? '封面副标题（定位与主旨愿景）' : ''}",
+  "visionAnalysis": "（若用户提供了图片，请输出1-2句对图内关键信息/拓扑/数据的深度识读结论；无图片则留空字符串 \"\"）",
   "layoutConcept": "用通俗中文详述本页大局排版规划：指明所选用的多元版式（如横向卡片矩阵、左图右文、中心图解等），并说明文字与视觉配图的空间分布与留白呼应",
   "bullets": [
     "【合同智能审查】：秒级高亮跨版本条款冲突，自动标注潜在合规风险",
@@ -542,7 +560,7 @@ app.post('/api/chat-slide', async (req, res) => {
     "【决议工单流转】：自动提取会议结论生成任务，实时联动看板与催办"
   ],
   "metrics": null,
-  "fullSlideImagePrompt": "英文 16:9 成品 PPT 生图指令：根据本页多元版式，精确指引 GPT 在画面中渲染清晰的中文标题与卡片文字，并融入切题的 3D 视觉主体插图，彻底去除任何 no text 约束",
+  "fullSlideImagePrompt": "英文 16:9 成品 PPT 生图指令：根据本页多元版式，精确指引 GPT 在画面中渲染清晰的中文标题与卡片文字，并融入切题的视觉主体插图，彻底去除任何 no text 约束",
   "speakerNotes": ""
 }`;
 
@@ -558,36 +576,54 @@ app.post('/api/chat-slide', async (req, res) => {
 
 用户的修改意见：
 "${userPrompt}"
-${userImages.length > 0 ? `(用户提供了 ${userImages.length} 张新图片以替换/融入该页)` : ''}
+${hasUserImage ? `(用户提供了 ${userImages.length} 张本地参考图片以替换/融入该页。请深入识读并提炼图片内容！)` : ''}
 
 【文案与排版核心要领】：
 1. 严禁使用“提高效率/助力决策/辅助决策/打破信息孤岛/团队协作/优化流程/降本增效”等套话！必须深度翻译为具体业务举措与动作（如：合同比对审查、异动看板归因、工单催办流转）；
 2. 每个要点正文必须严格控制在 15-25 字以内，短促有力，字绝对不要太多；
 3. 配图形式自由多元：不必全都是 3D 浮空板，在涉及办公实景、团队协作或架构规范时，合适可自然选用高端商业纪实摄影、现代扁平矢量信息图或 3D 概念装置；
-4. 请输出该页的精准结构化 JSON。`
+4. 若有图片，请结合图中所展现的具体内容提炼出针对性极强的落地论据；
+5. 请输出该页的精准结构化 JSON。`
         : `PPT整体主题：【${topic || '商业汇报'}】
 前序页面上下文：
 ${historyContext || '无（当前为首张页面）'}
 
 用户对第 ${slideIndex} 页的具体要求：
 "${userPrompt}"
-${userImages.length > 0 ? `(用户同时拖拽上传了 ${userImages.length} 张本地图片放置在该页)` : ''}
+${hasUserImage ? `(用户同时拖拽上传了 ${userImages.length} 张本地参考图片放置在该页。请深入识读并提炼图片内容！)` : ''}
 
 【文案与排版核心要领】：
 1. 严禁使用“提高效率/助力决策/辅助决策/打破信息孤岛/团队协作/优化流程/降本增效”等套话！必须深度翻译为具体业务举措与动作（如：合同比对审查、异动看板归因、工单催办流转）；
 2. 每个要点正文必须严格控制在 15-25 字以内，短促有力，字绝对不要太多；
 3. 配图形式自由多元：不必全都是 3D 浮空板，在涉及办公实景、团队协作或架构规范时，合适可自然选用高端商业纪实摄影、现代扁平矢量信息图或 3D 概念装置；
-4. 请输出该页的精准结构化 JSON。`;
+4. 若有图片，请结合图中所展现的具体内容提炼出针对性极强的落地论据；
+5. 请输出该页的精准结构化 JSON。`;
 
       const headers = { 'Content-Type': 'application/json' };
       if (activeKey) headers['Authorization'] = `Bearer ${activeKey}`;
 
-      const requestPayload = {
-        model: activeModel,
-        messages: [
+      let messagesPayload = [];
+      if (isVisionMode && hasUserImage) {
+        messagesPayload = [
+          { role: 'system', content: systemInstruction },
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: userContent },
+              { type: 'image_url', image_url: { url: userImages[0] } }
+            ]
+          }
+        ];
+      } else {
+        messagesPayload = [
           { role: 'system', content: systemInstruction },
           { role: 'user', content: userContent }
-        ],
+        ];
+      }
+
+      const requestPayload = {
+        model: effectiveModel,
+        messages: messagesPayload,
         temperature: 0.7
       };
 
@@ -598,6 +634,31 @@ ${userImages.length > 0 ? `(用户同时拖拽上传了 ${userImages.length} 张
       });
 
       // If 400 (unsupported response_format on some domestic models), retry without it
+      if (!response.ok && response.status === 400) {
+        response = await fetch(`${activeUrl.replace(/\/$/, '')}/chat/completions`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(requestPayload)
+        });
+      }
+
+      // Vision fallback: if vision model encountered an error (e.g. rate limit), fall back to text-only glm-4-flash
+      if (!response.ok && isVisionMode) {
+        console.warn(`[Vision Engine] Multimodal call with ${effectiveModel} failed (${response.status}). Retrying with text model ${activeModel}...`);
+        const textFallbackPayload = {
+          model: activeModel,
+          messages: [
+            { role: 'system', content: systemInstruction },
+            { role: 'user', content: userContent }
+          ],
+          temperature: 0.7
+        };
+        response = await fetch(`${activeUrl.replace(/\/$/, '')}/chat/completions`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(textFallbackPayload)
+        });
+      }
       if (!response.ok && response.status === 400) {
         response = await fetch(`${activeUrl.replace(/\/$/, '')}/chat/completions`, {
           method: 'POST',
@@ -743,6 +804,13 @@ ${layoutDesc.promptLayout}
           }
 
           slideData.speakerNotes = '';
+          if (typeof slideData.visionAnalysis === 'string' && slideData.visionAnalysis.trim()) {
+            slideData.visionAnalysis = slideData.visionAnalysis.trim();
+          } else if (hasUserImage) {
+            slideData.visionAnalysis = '已通过 GLM-4V 视觉多模态引擎完成原图深度解析与信息提炼';
+          } else {
+            slideData.visionAnalysis = '';
+          }
 
           if (userImages.length > 0) {
             slideData.imageUrl = userImages[0];

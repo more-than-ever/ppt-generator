@@ -77,6 +77,11 @@ export default function App() {
   const toBulletText = (b) => (typeof b === 'string' ? b : (b?.title ? `${b.title}：${b.description || ''}` : String(b || '')));
 
   const formatSlideAssistantReply = (slide, slideIndex, isRework = false) => {
+    let visionSection = '';
+    if (slide.visionAnalysis && slide.visionAnalysis.trim()) {
+      visionSection = `👁️ **多模态视觉深度解析**：\n> ${slide.visionAnalysis.trim()}\n\n`;
+    }
+
     let conceptSection = '';
     if (slide.layoutConcept) {
       conceptSection = `📐 **版面与视觉布局安排**：\n> ${slide.layoutConcept}\n\n`;
@@ -99,7 +104,7 @@ export default function App() {
     return `${prefix}
 
 ${titleBlock}
-${conceptSection}${bulletsSection}💡 **请您审阅并决定**：
+${visionSection}${conceptSection}${bulletsSection}💡 **请您审阅并决定**：
 - 本页版面图文空间规划与精修文案已在上方列出供您审阅；
 - 若满意当前排版构思与文案，点击下方【交付 GPT 渲染整页】按钮即可由 GPT 直接渲染整张 16:9 成品 PPT；
 - 若需调整内容、增删论据或重构布局，您可以随时在下方直接输入或点击【语音描述】说话交代！`;
