@@ -583,6 +583,73 @@ test("本机API来源保护、乐观锁、配置不泄密及磁盘失败不假�
   }
 });
 
+test("API地址跨主机变更自动清空已存密钥，测试接口不向陌生地址复用密钥", async (t) => {
+  const store = await storeFor();
+  const { app } = await createApp({
+    dataDir: store.root,
+    config: {
+      ...config,
+      llmApiUrl: "https://api.deepseek.com",
+      llmApiKey: "synthetic-secret",
+      llmModel: "m",
+    },
+    configPath: path.join(store.root, "cfg.env"),
+  });
+  const server = app.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(
+    () =>
+      new Promise((resolve) => {
+        server.closeAllConnections();
+        server.close(resolve);
+      }),
+  );
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const post = (url, body) =>
+    fetch(base + url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  assert.equal(
+    (await (await fetch(base + "/api/config")).json()).hasLlmKey,
+    true,
+  );
+  // 跨主机改地址、不带新密钥 → 已存密钥被清空，静默改地址无法外送 Bearer
+  assert.equal(
+    (await (await post("/api/config", { llmApiUrl: "https://evil.example.com" })).json())
+      .hasLlmKey,
+    false,
+  );
+  // 带新密钥一起提交 → 保留（正常换供应商不受影响）
+  assert.equal(
+    (
+      await (
+        await post("/api/config", {
+          llmApiUrl: "https://api.deepseek.com",
+          llmApiKey: "k2",
+        })
+      ).json()
+    ).hasLlmKey,
+    true,
+  );
+  // 同主机仅改路径（host 不变）→ 不清空
+  assert.equal(
+    (
+      await (
+        await post("/api/config", { llmApiUrl: "https://api.deepseek.com/v1" })
+      ).json()
+    ).hasLlmKey,
+    true,
+  );
+  // test-llm 向陌生 host 但不带 key → 400（不回落已存密钥，且在发起网络前拦截）
+  assert.equal(
+    (await post("/api/test-llm", { apiUrl: "https://evil.example.com", model: "m" }))
+      .status,
+    400,
+  );
+});
+
 test("损坏的图片任务隔离保留，不阻断文稿服务或自动重试付费任务", async (t) => {
   const store = await storeFor(),
     taskId = crypto.randomUUID();

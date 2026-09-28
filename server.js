@@ -61,6 +61,15 @@ const configUrl = (value) => {
   }
 };
 
+// 取 URL 的 host（小写）用于比较地址是否跨主机变更；非法或空值返回空串。
+const urlHost = (value) => {
+  try {
+    return new URL(value).host.toLowerCase();
+  } catch {
+    return "";
+  }
+};
+
 export async function createApp({
   dataDir = process.env.SLIDEFLOW_DATA_DIR || path.join(root, "data"),
   config = initialConfig(),
@@ -140,6 +149,20 @@ export async function createApp({
         }
         for (const key of ["llmApiKey", "gptimage2ApiKey"])
           if (req.body[`clear_${key}`] === true) next[key] = "";
+        // 安全：某 API 地址的 host 相对已存值发生变化、且本次未显式提交新密钥时，
+        // 清空该槽位已存密钥，防止本机进程静默改写地址后把既有 Bearer 发往攻击者服务器。
+        for (const [urlKey, keyKey] of [
+          ["llmApiUrl", "llmApiKey"],
+          ["gptimage2ApiUrl", "gptimage2ApiKey"],
+        ]) {
+          const explicitKey =
+            typeof req.body[keyKey] === "string" &&
+            req.body[keyKey].trim() !== "";
+          const prevHost = urlHost(runtimeConfig[urlKey]);
+          const nextHost = urlHost(next[urlKey]);
+          if (prevHost && nextHost && prevHost !== nextHost && !explicitKey)
+            next[keyKey] = "";
+        }
         const old = fs.existsSync(configPath)
           ? dotenv.parse(await fsp.readFile(configPath))
           : {};
@@ -166,7 +189,17 @@ export async function createApp({
     "/api/test-llm",
     asyncRoute(async (req, res) => {
       const c = runtimeConfig;
-      const apiUrl = configUrl(req.body.apiUrl || c.llmApiUrl),
+      const bodyUrl =
+        typeof req.body.apiUrl === "string" && req.body.apiUrl.trim()
+          ? req.body.apiUrl
+          : "";
+      const explicitKey =
+        typeof req.body.apiKey === "string" && req.body.apiKey.trim() !== "";
+      // 安全：向与已存地址不同 host 测试时必须显式提供该地址密钥，不得回落已存密钥，
+      // 避免用测试接口把既有 Bearer 发往陌生地址。
+      if (bodyUrl && !explicitKey && urlHost(bodyUrl) !== urlHost(c.llmApiUrl))
+        throw error(400, "更换地址测试需显式提供该地址的密钥");
+      const apiUrl = configUrl(bodyUrl || c.llmApiUrl),
         key = req.body.apiKey || c.llmApiKey,
         model = req.body.model || c.llmModel;
       if (typeof model !== "string" || !model.trim() || model.length > 2000)
