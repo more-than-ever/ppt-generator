@@ -30,11 +30,7 @@ import {
   sourceIssues,
   visibleFields,
 } from "../shared/deck.js";
-import {
-  compatibleLayouts,
-  createTextMeasurer,
-  waitForFonts,
-} from "../shared/slideScene.js";
+import { createTextMeasurer, waitForFonts } from "../shared/slideScene.js";
 import { LAYOUT_CATALOG } from "../shared/layouts.js";
 
 const fieldName = (field) =>
@@ -91,7 +87,8 @@ export default function App() {
     [fonts, setFonts] = useState(false),
     [newSource, setNewSource] = useState(""),
     [styleRequest, setStyleRequest] = useState(""),
-    [taskError, setTaskError] = useState("");
+    [taskError, setTaskError] = useState(""),
+    [inlinePrompt, setInlinePrompt] = useState("");
   const operation = useRef(false);
   const activeSlide = useRef(null);
   const measure = useMemo(() => createTextMeasurer(), [fonts]);
@@ -354,9 +351,35 @@ export default function App() {
       aiRender: null,
     });
   }
+  // 独立配图（kind=inline）任务完成后自动追加到页面插图列表，幂等去重。
+  function applyInlineTask(task) {
+    const s = w.ref.current?.slides.find((s) => s.id === task.slideId);
+    if (
+      task.kind !== "inline" ||
+      task.status !== "completed" ||
+      !task.asset ||
+      task.deckId !== w.ref.current?.id ||
+      !s ||
+      (s.inlineImages || []).some((i) => i.assetId === task.asset.id)
+    )
+      return;
+    w.setAssets((a) => ({ ...a, [task.asset.id]: task.asset }));
+    patchSlideFields(task.slideId, {
+      inlineImages: [
+        ...(s.inlineImages || []),
+        {
+          id: crypto.randomUUID(),
+          assetId: task.asset.id,
+          placement: null,
+          prompt: task.prompt || "",
+        },
+      ].slice(0, 6),
+    });
+  }
   useEffect(() => {
     if (!deck) return;
     for (const t of tasks) applyRenderTask(t);
+    for (const t of tasks) applyInlineTask(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tasks, deck?.id]);
   async function renderSlideNow() {
@@ -364,7 +387,24 @@ export default function App() {
       deck: w.ref.current,
       slideId: current.id,
     });
-    patchSlideFields(current.id, r.slidePatch);
+    const { placements, ...slidePatch } = r.slidePatch;
+    if (Array.isArray(placements)) {
+      // 整页渲染方案带回了每张独立配图的摆位，按顺序写回对应插图。
+      w.change((d) => ({
+        ...d,
+        slides: d.slides.map((s) =>
+          s.id === current.id
+            ? {
+                ...s,
+                inlineImages: (s.inlineImages || []).map((img, i) =>
+                  placements[i] ? { ...img, placement: placements[i] } : img,
+                ),
+              }
+            : s,
+        ),
+      }));
+    }
+    patchSlideFields(current.id, slidePatch);
     const list = await api(`/api/image-tasks?deckId=${deck.id}`);
     setTasks(list.tasks);
     if (r.done) {
@@ -597,52 +637,55 @@ export default function App() {
       omitVisual: false,
     });
   }
-  async function generateImages(all = false) {
-    const saved = await w.flush();
-    const targets = all
-      ? saved.slides.filter(
-          (s) =>
-            !s.omitVisual &&
-            LAYOUT_CATALOG[s.layoutId]?.userImageFrames.length >
-              s.assets.length,
-        )
-      : [saved.slides[index]];
-    if (!targets.length) throw new Error("没有待生成的配图画框");
-    if (
-      !window.confirm(
-        `将为${targets.length}页提交配图任务，供应商可能计费。无图版式不会请求。继续？`,
+  // 独立配图上色：支持一次多选上传，全部转码后一次性追加，页面被改动则整体放弃。
+  async function uploadInlineImages(fileList) {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    if ((current.inlineImages || []).length + files.length > 6)
+      throw new Error("每页最多6张插图");
+    for (const file of files)
+      if (
+        file.size > 10 * 1024 * 1024 ||
+        !["image/png", "image/jpeg", "image/webp"].includes(file.type)
       )
-    )
-      return;
-    for (const s of targets)
-      await api("/api/image-tasks", {
-        deckId: saved.id,
-        slideId: s.id,
-        inputRevision: s.contentRevision,
-        slot: s.assets.length,
-      });
-    setTasks((await api(`/api/image-tasks?deckId=${saved.id}`)).tasks);
-  }
-  function applyImage(task) {
-    const s = w.ref.current.slides.find((s) => s.id === task.slideId);
-    if (
-      task.deckId !== w.ref.current.id ||
-      s?.contentRevision !== task.inputRevision ||
-      task.slot !== s.assets.length
-    )
-      throw new Error("配图属于旧版本，未应用到当前页面");
-    w.setAssets((a) => ({ ...a, [task.asset.id]: task.asset }));
-    w.change((d) =>
-      updateSlide(
-        d,
-        s.id,
-        {
-          assets: [...s.assets, { id: task.asset.id, fit: "contain" }],
-          omitVisual: false,
-        },
-        measure,
-      ),
+        throw new Error("请上传10MB以内的PNG、JPEG或WebP");
+    const snapshot = current;
+    const uploaded = await Promise.all(
+      files.map(async (file) => {
+        const dataUrl = await readDataUrl(file);
+        const image = new Image();
+        image.src = dataUrl;
+        await image.decode();
+        return api("/api/assets", { dataUrl, name: file.name });
+      }),
     );
+    if (w.ref.current?.id !== deck.id)
+      throw new Error("文稿已改变，图片未加入当前页面");
+    w.setAssets((a) => ({
+      ...a,
+      ...Object.fromEntries(uploaded.map(({ asset }) => [asset.id, asset])),
+    }));
+    patch({
+      inlineImages: [
+        ...(snapshot.inlineImages || []),
+        ...uploaded.map(({ asset }) => ({
+          id: crypto.randomUUID(),
+          assetId: asset.id,
+          placement: null,
+          prompt: "",
+        })),
+      ].slice(0, 6),
+    });
+  }
+  async function generateInlineImage() {
+    const saved = await w.flush();
+    const slide = saved.slides.find((s) => s.id === current.id);
+    await api("/api/deck-inline-image", {
+      deckId: saved.id,
+      slideId: slide.id,
+      prompt: inlinePrompt.trim(),
+    });
+    setTasks((await api(`/api/image-tasks?deckId=${saved.id}`)).tasks);
   }
   async function doExport() {
     if (!fonts) throw new Error("字体仍在加载");
@@ -1242,7 +1285,7 @@ export default function App() {
               <nav className="inspector-tabs">
                 {[
                   ["content", "内容"],
-                  ["design", "设计"],
+                  ["design", "配图"],
                   ["style", "风格"],
                   ["check", "检查"],
                 ].map(([key, label]) => (
@@ -1440,73 +1483,7 @@ export default function App() {
                 )}
                 {panel === "design" && (
                   <>
-                    <label>
-                      内容关系
-                      <select
-                        value={current.type}
-                        disabled={index === 0}
-                        onChange={(e) =>
-                          patch({ type: e.target.value, layoutPinned: false })
-                        }
-                      >
-                        {Object.entries({
-                          cover: "封面",
-                          cards: "并列观点",
-                          process: "顺序流程",
-                          compare: "等权对比",
-                          metrics: "指标证据",
-                          statement: "核心观点",
-                          summary: "总结收束",
-                        })
-                          .filter(
-                            ([key]) => key === current.type || key !== "cover",
-                          )
-                          .map(([key, label]) => (
-                            <option key={key} value={key}>
-                              {label}
-                            </option>
-                          ))}
-                      </select>
-                    </label>
-                    <label>
-                      兼容版式
-                      <select
-                        value={current.layoutId}
-                        onChange={(e) =>
-                          patch({
-                            layoutId: e.target.value,
-                            layoutPinned: true,
-                          })
-                        }
-                      >
-                        {!compatibleLayouts(current).includes(
-                          current.layoutId,
-                        ) && (
-                          <option value={current.layoutId}>
-                            当前版式不兼容
-                          </option>
-                        )}
-                        {compatibleLayouts(current).map((id) => (
-                          <option key={id} value={id}>
-                            {LAYOUT_CATALOG[id].name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="check-line">
-                      <input
-                        type="checkbox"
-                        checked={current.layoutPinned}
-                        onChange={(e) =>
-                          patch({ layoutPinned: e.target.checked })
-                        }
-                      />
-                      锁定此版式
-                    </label>
-                    <p className="muted">
-                      锁定后放不下会显示问题，不裁字、不自动换版。
-                    </p>
-                    <h3>独立配图</h3>
+                    <h3>背景图</h3>
                     <label className="check-line">
                       <input
                         type="checkbox"
@@ -1518,11 +1495,11 @@ export default function App() {
                       省略空画框，不生成配图
                     </label>
                     <label>
-                      配图主体
+                      背景描述
                       <textarea
                         rows={3}
                         value={current.visualIdea || ""}
-                        placeholder="描述物体、场景或插图；不要写页面正文"
+                        placeholder="描述背景氛围与意象；渲染整页图时作为背景指令"
                         onChange={(e) =>
                           patch({ visualIdea: e.target.value }, "visual")
                         }
@@ -1544,37 +1521,7 @@ export default function App() {
                           }}
                         />
                       </label>
-                      <button
-                        disabled={
-                          !imageReady ||
-                          Boolean(busy) ||
-                          current.omitVisual ||
-                          !current.visualIdea.trim() ||
-                          !(
-                            LAYOUT_CATALOG[current.layoutId]?.userImageFrames
-                              .length > current.assets.length
-                          )
-                        }
-                        onClick={() =>
-                          act(() => generateImages(false), "提交配图")
-                        }
-                      >
-                        生成本页配图
-                      </button>
                     </div>
-                    <button
-                      disabled={!imageReady || Boolean(busy)}
-                      onClick={() =>
-                        act(() => generateImages(true), "批量提交配图")
-                      }
-                    >
-                      生成全部待配图页面
-                    </button>
-                    {!imageReady && (
-                      <p className="muted">
-                        图片模型尚未配置；不影响编辑、预览与导出。
-                      </p>
-                    )}
                     {current.assets.map((a, i) => (
                       <div className="asset-card" key={`${a.id}-${i}`}>
                         <img src={assets[a.id]?.url} alt={`本页配图${i + 1}`} />
@@ -1614,12 +1561,6 @@ export default function App() {
                               : taskNames[t.status]}
                           </strong>
                           <p>{t.error}</p>
-                          {t.status === "completed" &&
-                            t.inputRevision === current.contentRevision && (
-                              <button onClick={() => act(() => applyImage(t))}>
-                                应用配图
-                              </button>
-                            )}
                           {["queued", "running"].includes(t.status) && (
                             <button
                               onClick={() =>
@@ -1641,22 +1582,78 @@ export default function App() {
                               取消等待
                             </button>
                           )}
-                          {[
-                            "failed",
-                            "interrupted",
-                            "cancelled",
-                            "stale",
-                          ].includes(t.status) && (
-                            <button
-                              onClick={() =>
-                                act(() => generateImages(false), "重新提交配图")
-                              }
-                            >
-                              按当前版本重试
-                            </button>
-                          )}
                         </div>
                       ))}
+                    <h3>独立配图</h3>
+                    <p className="muted">
+                      插图作为页面元素叠加显示：程序排版与GPT整页渲染都会为它留位，不压文字；可上传多张，也可按描述生成。
+                    </p>
+                    <label>
+                      插图描述
+                      <textarea
+                        rows={3}
+                        value={inlinePrompt}
+                        placeholder="描述想要的插图内容，如：金色海面上的出口货轮"
+                        onChange={(e) => setInlinePrompt(e.target.value)}
+                      />
+                    </label>
+                    <div className="button-row">
+                      <label className="file-button">
+                        <ImagePlus size={15} />
+                        上传图片
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          multiple
+                          onChange={(e) => {
+                            act(
+                              () => uploadInlineImages(e.target.files),
+                              "上传插图",
+                            );
+                            e.target.value = "";
+                          }}
+                        />
+                      </label>
+                      <button
+                        disabled={
+                          !imageReady ||
+                          Boolean(busy) ||
+                          !inlinePrompt.trim()
+                        }
+                        onClick={() => act(generateInlineImage, "生成插图")}
+                      >
+                        生成插图
+                      </button>
+                    </div>
+                    {!imageReady && (
+                      <p className="muted">
+                        图片模型尚未配置；不影响编辑、预览与导出。
+                      </p>
+                    )}
+                    {(current.inlineImages || []).map((img, i) => (
+                      <div className="asset-card" key={img.id}>
+                        <img
+                          src={assets[img.assetId]?.url}
+                          alt={`插图${i + 1}`}
+                        />
+                        <span className="muted">
+                          {img.placement
+                            ? "已按排版留位"
+                            : "待渲染时自动留位"}
+                        </span>
+                        <button
+                          onClick={() =>
+                            patch({
+                              inlineImages: (
+                                current.inlineImages || []
+                              ).filter((x) => x.id !== img.id),
+                            })
+                          }
+                        >
+                          移除插图
+                        </button>
+                      </div>
+                    ))}
                   </>
                 )}
                 {panel === "style" && (
@@ -1698,31 +1695,17 @@ export default function App() {
                 )}
                 {panel === "check" && (
                   <>
-                    <h3>第 {index + 1} 页检查</h3>
-                    <p className="muted">
-                      排版检查不等于事实核验；来源引用仍需核对原文含义。
-                    </p>
-                    {scene.issues.length ? (
-                      scene.issues.map((i, n) => (
-                        <article className="issue-card blocking" key={n}>
-                          <strong>{fieldName(i.field || "版式")}</strong>
-                          <p>{i.message}</p>
-                        </article>
-                      ))
-                    ) : (
-                      <p className="success">文字区域、边界与结构检查通过</p>
-                    )}
                     {aiImage ? (
                       <>
                         <button
-                          className="primary"
+                          className="primary render-cta"
                           disabled={Boolean(busy) || !textReady}
                           onClick={() => act(renderSlideNow, "重新生成整页图")}
                         >
                           重新生成整页图
                         </button>
                         <button
-                          className="primary"
+                          className="primary render-cta"
                           disabled={Boolean(busy)}
                           onClick={clearAiImage}
                         >
@@ -1742,7 +1725,7 @@ export default function App() {
                           </p>
                         )}
                         <button
-                          className="primary"
+                          className="primary render-cta"
                           disabled={Boolean(busy)}
                           onClick={
                             renderTask?.status === "failed"
@@ -1757,29 +1740,13 @@ export default function App() {
                       </>
                     ) : (
                       <button
-                        className="primary"
+                        className="primary render-cta"
                         disabled={Boolean(busy) || !textReady}
                         onClick={() => act(renderSlideNow, "GPT渲染本页")}
                       >
                         GPT 渲染本页
                       </button>
                     )}
-                    {deck.review?.status === "failed" && (
-                      <p className="error">
-                        整套复核未完成：{deck.review.error}
-                      </p>
-                    )}
-                    {!deck.review && (
-                      <p className="muted">
-                        尚未复核或编辑后结果已失效。可点击顶部“整套复核”。
-                      </p>
-                    )}
-                    {semantic
-                      .filter((i) => i.slideId === current.id)
-                      .map(issueCard)}
-                    {warnings
-                      .filter((i) => i.slideId === current.id)
-                      .map(issueCard)}
                   </>
                 )}
               </div>

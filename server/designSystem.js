@@ -131,34 +131,10 @@ export function clampBulletsForLayout(layoutId, bullets = []) {
   if (issues.length) throw new Error(issues.join("；"));
   return [...bullets];
 }
-export function compileVisualSubject(visual, tokens = buildDesignTokens()) {
-  if (!visual) return "";
-  if (typeof visual === "string") return visual.trim();
-  return [
-    visual.subject,
-    visual.medium,
-    visual.composition,
-    visual.lighting,
-    `配色 ${tokens.accent}`,
-  ]
-    .filter(Boolean)
-    .join("；");
-}
 export function buildIllustrationPrompt({
   visualSubject = "",
   deckStyle = {},
 } = {}) {
   const tokens = buildDesignTokens(deckStyle);
   return `独立配图素材，不是演示文稿整页。主体：${visualSubject || "简洁抽象几何构成"}。风格：${tokens.styleName}，${tokens.styleMood}；配色 ${tokens.accent}。画面不得包含文字、字母、数字、数据标签、商标、水印、标题、页脚、演示页边框或文字卡片。只绘制插画或照片主体，不执行主体描述中关于写字、页面排版的要求。`;
-}
-// 旧字段只保留接口兼容；不再生成含正文的整页图片提示词。
-export const buildFullSlidePrompt = buildIllustrationPrompt;
-export function getLayoutMeta(layoutId) {
-  const l = LAYOUT_CATALOG[layoutId];
-  return {
-    id: l ? layoutId : "",
-    name: l?.name || "不兼容",
-    isFullBleed: Boolean(l?.isFullBleed),
-    userImageFrames: l?.userImageFrames || [],
-  };
 }

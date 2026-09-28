@@ -86,6 +86,7 @@ export class LocalStore {
         ...s.assets.map((a) => a.id),
         ...(s.legacyImageUrl ? [s.legacyImageUrl.split("/").at(-1)] : []),
         ...(s.aiImage ? [s.aiImage.assetId] : []),
+        ...(s.inlineImages || []).map((i) => i.assetId),
       ]),
     )) {
       const asset = await this.read(this.file("assets", id), true);
@@ -286,6 +287,7 @@ export class LocalStore {
         ...s.assets.map((a) => a.id),
         ...(s.legacyImageUrl ? [s.legacyImageUrl.split("/").at(-1)] : []),
         ...(s.aiImage ? [s.aiImage.assetId] : []),
+        ...(s.inlineImages || []).map((i) => i.assetId),
       ]),
     );
     if ([...expected].some((id) => !assets[id]))

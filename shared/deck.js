@@ -106,6 +106,10 @@ export function validateDeck(raw) {
         : "",
       aiImage: sanitizeAiImage(s.aiImage),
       aiRender: sanitizeAiRender(s.aiRender),
+      inlineImages: (Array.isArray(s.inlineImages) ? s.inlineImages : [])
+        .map(sanitizeInlineImage)
+        .filter(Boolean)
+        .slice(0, 6),
     };
   });
   if (
@@ -174,6 +178,31 @@ function sanitizeAiRender(raw) {
     taskId: raw.taskId,
     description:
       typeof raw.description === "string" ? raw.description.slice(0, 2000) : "",
+  };
+}
+// 独立配图（图中画）：assetId 指向素材库，placement 为 DeepSeek 摆位结果
+//（1600×900 画布坐标），null 表示尚未摆位、由程序兜底排右列。
+function sanitizeInlineImage(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  if (!validId(raw.id) || !validId(raw.assetId)) return null;
+  const placement =
+    raw.placement &&
+    typeof raw.placement === "object" &&
+    [raw.placement.x, raw.placement.y, raw.placement.w, raw.placement.h].every(
+      (n) => Number.isFinite(n) && n >= 0,
+    )
+      ? {
+          x: Math.min(raw.placement.x, CANVAS.width),
+          y: Math.min(raw.placement.y, CANVAS.height),
+          w: Math.min(raw.placement.w, CANVAS.width),
+          h: Math.min(raw.placement.h, CANVAS.height),
+        }
+      : null;
+  return {
+    id: raw.id,
+    assetId: raw.assetId,
+    placement,
+    prompt: typeof raw.prompt === "string" ? raw.prompt.slice(0, 2000) : "",
   };
 }
 // 页面可见字段：内容非空才需要进入生图提示词。
@@ -307,6 +336,13 @@ export function updateSlide(deck, slideId, patch, measure) {
             }),
           ),
       };
+      // 内容被编辑（contentRevision 递增）时，旧排版下摆的插图位置作废，
+      // 交由下次渲染重新摆位；插图本身保留。
+      if ((next.inlineImages || []).some((i) => i.placement))
+        next.inlineImages = next.inlineImages.map((i) => ({
+          ...i,
+          placement: null,
+        }));
       if (!next.layoutPinned)
         next.layoutId =
           chooseLayout(next, { measure, design: deck.design }) || next.layoutId;
@@ -355,12 +391,37 @@ export function sourceIssues(deck) {
 }
 // 单页场景：GPT 整页渲染页吃 AI 图片（预览/演示/导出同一数据），
 // 内容被编辑（contentRevision 变化）即失效回退程序排版。
+// 独立配图（图中画）两种模式都叠加：有 DeepSeek 摆位用摆位，未摆位兜底排右列。
+function inlineImageElements(slide) {
+  const list = slide.inlineImages || [];
+  const unplaced = list.filter((i) => !i.placement).length;
+  const w = 340,
+    h = 220,
+    gap = 24,
+    margin = 48;
+  const totalH = unplaced * h + (unplaced - 1) * gap;
+  let slot = 0;
+  return list.map((img) => {
+    const box = img.placement || (() => {
+      const box = {
+        x: CANVAS.width - margin - w,
+        y: Math.max(margin, (CANVAS.height - totalH) / 2 + slot * (h + gap)),
+        w,
+        h,
+      };
+      slot += 1;
+      return box;
+    })();
+    return { kind: "image", ...box, assetId: img.assetId, fit: "contain" };
+  });
+}
 export function slideScene(
   deck,
   slide,
   index,
   { assets = {}, measure } = {},
 ) {
+  const inline = inlineImageElements(slide);
   if (slide.aiImage?.contentRevision === slide.contentRevision)
     return {
       sceneVersion: 1,
@@ -375,6 +436,7 @@ export function slideScene(
           assetId: slide.aiImage.assetId,
           fit: "cover",
         },
+        ...inline,
       ],
       issues: [],
       contentRevision: slide.contentRevision,
@@ -382,13 +444,14 @@ export function slideScene(
       background: deck.design.palette.bg,
       ai: true,
     };
-  return buildScene(slide, {
+  const scene = buildScene(slide, {
     design: deck.design,
     assets,
     measure,
     slideIndex: index + 1,
     totalSlides: deck.slides.length,
   });
+  return { ...scene, elements: [...scene.elements, ...inline] };
 }
 export function deckScenes(deck, assets, measure) {
   return deck.slides.map((s, i) => slideScene(deck, s, i, { assets, measure }));

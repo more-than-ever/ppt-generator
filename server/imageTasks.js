@@ -353,6 +353,60 @@ export class ImageTasks {
     this.pump();
     return task;
   }
+  // 独立配图（图中画）：按用户描述生成方形插图，与页面文字版本无关（无
+  // inputRevision/stale），同提示词全局缓存复用已完成任务避免重复计费。
+  enqueueInline(input) {
+    return this.store.serial("image-enqueue", () => this.submitInline(input));
+  }
+  async submitInline({ deckId, slideId, prompt }) {
+    const { deck } = await this.store.load(deckId),
+      slide = deck.slides.find((s) => s.id === slideId);
+    if (!slide) throw error(404, "页面不存在");
+    if (!String(prompt || "").trim()) throw error(400, "请先描述想要的配图");
+    const c = this.getConfig();
+    if (!c.gptimage2Model) throw error(503, "请先填写实际图片模型名称");
+    if (
+      !c.gptimage2ApiKey &&
+      !/^http:\/\/(127\.0\.0\.1|localhost)(:|\/)/.test(c.gptimage2ApiUrl)
+    )
+      throw error(503, "请先配置图片模型");
+    const size = "1024x1024";
+    const cacheKey = createHash("sha256")
+      .update(
+        JSON.stringify([c.gptimage2ApiUrl, c.gptimage2Model, size, prompt]),
+      )
+      .digest("hex");
+    let cached = [...this.tasks.values()].find(
+      (t) =>
+        t.kind === "inline" &&
+        t.cacheKey === cacheKey &&
+        t.status === "completed" &&
+        t.asset,
+    );
+    if (
+      cached &&
+      !(await this.store.read(this.store.file("assets", cached.asset.id), true))
+    )
+      cached = null;
+    const task = {
+      requestId: randomUUID(),
+      kind: "inline",
+      deckId,
+      slideId,
+      status: cached ? "completed" : "queued",
+      prompt: prompt.trim(),
+      size,
+      cacheKey,
+      provider: c.gptimage2ApiUrl,
+      model: c.gptimage2Model,
+      createdAt: new Date().toISOString(),
+      ...(cached ? { asset: cached.asset } : {}),
+    };
+    this.tasks.set(task.requestId, task);
+    await this.persist(task);
+    if (!cached) this.pump();
+    return task;
+  }
   async submit({ deckId, slideId, inputRevision, slot = 0 }) {
     const { deck } = await this.store.load(deckId),
       slide = deck.slides.find((s) => s.id === slideId);
@@ -468,7 +522,9 @@ export class ImageTasks {
       if (
         !deck.slides.some(
           (s) =>
-            s.id === task.slideId && s.contentRevision === task.inputRevision,
+            s.id === task.slideId &&
+            (task.kind === "inline" ||
+              s.contentRevision === task.inputRevision),
         )
       )
         throw error(409, "原页面已改变，未继续配图");
@@ -495,7 +551,9 @@ export class ImageTasks {
       if (
         !current.deck.slides.some(
           (s) =>
-            s.id === task.slideId && s.contentRevision === task.inputRevision,
+            s.id === task.slideId &&
+            (task.kind === "inline" ||
+              s.contentRevision === task.inputRevision),
         )
       ) {
         task.status = "stale";

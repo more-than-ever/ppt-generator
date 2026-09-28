@@ -1324,3 +1324,13 @@ h3 {
   font-size: 1.15em;
   font-weight: 600;
 }
+
+/* 检查栏渲染主按钮：全宽大按钮，突出主行动 */
+.render-cta {
+  width: 100%;
+  padding: 14px 18px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin-top: 4px;
+}

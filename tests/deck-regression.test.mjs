@@ -376,7 +376,11 @@ test("renderSlide：prompt必须逐字包含全部页面文字，缺则修正循
   const target = sample.slides[1];
   const fullText = Object.values(visibleFields(target)).join("\n");
   const goodPlan = () => ({
-    prompt: `杂志分栏构图，深色底金色点缀。画面文字依次为：\n${fullText}`,
+    prompt: `杂志分栏构图，深色底金色点缀。画面文字依次为：\n${Object.values(
+      visibleFields(target),
+    )
+      .map((t) => `「${t}」`)
+      .join("\n")}`,
     layoutDescription: "左侧超大标题竖排，正文两栏错层排布，金色细线分隔。",
   });
   let calls = 0;
@@ -404,6 +408,35 @@ test("renderSlide：prompt必须逐字包含全部页面文字，缺则修正循
     () => service.renderSlide(sample, target.id),
     /GPT排版方案未达标/,
   );
+});
+
+test("renderSlide：画面文字不得多于给定文字（「」双向守门，多字打回修正）", async (t) => {
+  const service = new ContentService(() => ({
+    llmModel: "m",
+    llmApiKey: "k",
+    llmApiUrl: "http://supplier.local",
+  }));
+  const sample = fixtureDeck();
+  const target = sample.slides[1];
+  const quoted = Object.values(visibleFields(target)).map((x) => `「${x}」`);
+  let calls = 0;
+  t.mock.method(service, "json", async () => {
+    calls++;
+    if (calls === 1)
+      // 第一张：给定文字全包，但擅自多了一句口号
+      return {
+        prompt: `非对称留白构图。${quoted.join("，")}，角落点缀小字「超越自我 共创辉煌」`,
+        layoutDescription: "超大焦点字右置，正文左对齐。",
+      };
+    return {
+      prompt: `非对称留白构图。${quoted.join("，")}`,
+      layoutDescription: "超大焦点字右置，正文左对齐。",
+    };
+  });
+  const result = await service.renderSlide(sample, target.id);
+  assert.equal(calls, 2, "多字方案应被打回修正一次");
+  assert.match(result.prompt, /非对称留白/);
+  assert.ok(!result.prompt.includes("超越自我"));
 });
 
 test("aiImage随内容编辑失效回退程序排版，schema保留aiImage与aiRender", () => {

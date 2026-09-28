@@ -467,7 +467,7 @@ export class ContentService {
         {
           role: "system",
           content:
-            '你是演示文稿排版设计师兼图像提示词工程师。给定单页幻灯片的全部文字与视觉风格，为该页设计一个风格化的排版方案，并输出给图像生成模型(gpt-image)的提示词。只输出JSON：{"prompt":"...","layoutDescription":"..."}。prompt要求：1)画面中的文字必须逐字使用给定的全部文字（标题、每条正文一字不漏、一字不改），这是最高优先级；2)描述风格化的排版构图——先选定一种构图策略（杂志分栏、非对称留白、超大焦点字、色块分割、阶梯动线、环绕式布局等），写清元素位置关系、字号层级对比、对齐与留白；3)视觉氛围要华丽有质感，充分发挥生图模型的强项：背景可用与主题贴合的摄影感场景、插画或3D渲染（压暗、低对比或虚化作为衬底），搭配光效、渐变、颗粒纹理、几何装饰，以及与本页主题呼应的意象元素（如出口/汽车/数据主题可用航线轨迹、车灯光轨、货轮集装箱、世界地图光点、数据流光等）；所有文字区域必须保持高对比、清晰可读，任何装饰不得遮挡或干扰文字；4)配色以给定hex为主色体系，可在同色系内做深浅延展与光影层次，整体保持协调高级；5)画布比例3:2，全部文字与重要内容置于画面中央80%区域；6)prompt本身中英文均可，但画面文字必须是给定原文。layoutDescription是给用户看的排版说明：2-4句中文，说清本页构图与视觉处理。',
+            '你是演示文稿排版设计师兼图像提示词工程师。给定单页幻灯片的全部文字与视觉风格，为该页设计一个风格化的排版方案，并输出给图像生成模型(gpt-image)的提示词。只输出JSON：{"prompt":"...","layoutDescription":"..."}。prompt要求：1)画面中的文字必须逐字使用给定的全部文字（标题、每条正文一字不漏、一字不改），这是最高优先级；所有要渲染进画面的文字必须整体放在「」内（多条内容各用一个「」），画面中绝对不得出现给定文字以外的任何文字——包括小标签、口号、注解、页脚、装饰词；「」之外只允许写排版与视觉描述（构图、字体、色彩、材质、光影），不得夹带任何会被渲染出来的文字；多余装饰一律用无文字的图形、纹理、光效表达；2)描述风格化的排版构图——先选定一种构图策略（杂志分栏、非对称留白、超大焦点字、色块分割、阶梯动线、环绕式布局等），写清元素位置关系、字号层级对比、对齐与留白；3)视觉氛围要华丽有质感，充分发挥生图模型的强项：背景可用与主题贴合的摄影感场景、插画或3D渲染（压暗、低对比或虚化作为衬底），搭配光效、渐变、颗粒纹理、几何装饰，以及与本页主题呼应的意象元素（如出口/汽车/数据主题可用航线轨迹、车灯光轨、货轮集装箱、世界地图光点、数据流光等）；所有文字区域必须保持高对比、清晰可读，任何装饰不得遮挡或干扰文字，背景意象优先呼应输入中的backgroundIdea描述（为空则自行发挥与主题贴合的意象）；4)配色以给定hex为主色体系，可在同色系内做深浅延展与光影层次，整体保持协调高级；5)字体是风格的核心部分，必须为每个文字层级明确字体设计：根据风格mood选定字体气质（现代几何无衬线geometric sans-serif、人文无衬线humanist sans、优雅衬线elegant serif、工业粗黑industrial gothic、手写/书法等），并写清字重层级（标题extra-bold或粗黑、正文regular/medium）、字距处理（紧凑tight tracking或宽松airy spacing）与特殊处理（渐变填充、描边、下划线、阴影等）；prompt中用英文typography术语描述字体视觉特征，画面文字内容本身保持中文原文不变；6)若输入包含inlineImages（用户已备好N张插图，内容未知），必须为每张插图在构图上明确留出矩形区域——这些区域在prompt中描述为保持氛围协调的简洁衬底/留白，不画具体主体，并通过placements数组输出每张插图在1600×900画布上的坐标{index,x,y,w,h}（index从1开始与inlineImages顺序对应）；插图区域不得与任何文字区域重叠，插图之间也不得重叠；7)画布比例3:2，全部文字与重要内容置于画面中央80%区域；8)prompt本身中英文均可，但画面文字必须是给定原文。layoutDescription是给用户看的排版说明：2-4句中文，说清本页构图与视觉处理。',
         },
         {
           role: "user",
@@ -476,6 +476,11 @@ export class ContentService {
             palette: design.palette,
             mood: `${design.name}——${design.mood}`,
             fields,
+            backgroundIdea: slide.visualIdea || "",
+            inlineImages: (slide.inlineImages || []).map((_, i) => ({
+              index: i + 1,
+              note: "用户已备好的插图，内容未知，只需为其留位",
+            })),
           }),
         },
       ];
@@ -484,6 +489,39 @@ export class ContentService {
         Object.entries(fields)
           .filter(([, v]) => !squashed(prompt).includes(squashed(v)))
           .map(([f]) => f);
+      // 「」双向守门：画面文字集合必须与给定文字字符级一字不差。
+      // 返回 null 表示一致，否则给出多出的与缺少的字符（供修正循环反馈）。
+      const textMismatch = (prompt) => {
+        const quoted = [...prompt.matchAll(/「([^」]*)」/g)]
+          .map((m) => squashed(m[1]))
+          .filter(Boolean);
+        if (!quoted.length)
+          return { extra: [], missing: ["（未使用「」标记画面文字）"] };
+        const bag = (s) => [...s].sort().join("");
+        const given = bag(
+          Object.values(fields)
+            .map(squashed)
+            .sort()
+            .join(""),
+        ),
+          drawn = bag(quoted.slice().sort().join(""));
+        if (given === drawn) return null;
+        const count = (s) =>
+          s.split("").reduce((m, c) => ((m[c] = (m[c] || 0) + 1), m), {});
+        const g = count(given),
+          d = count(drawn);
+        const missing = [],
+          extra = [];
+        for (const c of Object.keys(g)) {
+          const diff = g[c] - (d[c] || 0);
+          if (diff > 0) missing.push(c + (diff > 1 ? `×${diff}` : ""));
+        }
+        for (const c of Object.keys(d)) {
+          const diff = d[c] - (g[c] || 0);
+          if (diff > 0) extra.push(c + (diff > 1 ? `×${diff}` : ""));
+        }
+        return { extra, missing };
+      };
       let lastIssues = [];
       for (let attempt = 0; attempt < 2; attempt++) {
         let raw;
@@ -507,17 +545,78 @@ export class ContentService {
         if (typeof raw?.prompt !== "string" || !raw.prompt.trim())
           issues.push("prompt必须是生图提示词字符串");
         else if (raw.prompt.length > 8000) issues.push("prompt过长（超过8000字符）");
-        else
+        else {
           issues.push(
             ...missingIn(raw.prompt).map(
               (f) => `prompt未包含字段${f}的完整文字，图中会漏字`,
             ),
           );
+          const mismatch = textMismatch(raw.prompt);
+          if (mismatch) {
+            const parts = [];
+            if (mismatch.extra.length)
+              parts.push(
+                `画面多出了未给定的文字"${mismatch.extra.join("").slice(0, 60)}"`,
+              );
+            if (mismatch.missing.length)
+              parts.push(
+                `画面缺少给定文字"${mismatch.missing.join("").slice(0, 60)}"`,
+              );
+            issues.push(
+              `所有要渲染进画面的文字必须放在「」内且与给定文字一字不差：${parts.join("；")}。多余文字一律删除，装饰只用无文字的图形、纹理、光效`,
+            );
+          }
+        }
         if (
           typeof raw?.layoutDescription !== "string" ||
           !raw.layoutDescription.trim()
         )
           issues.push("layoutDescription必须是排版说明字符串");
+        const imageCount = (slide.inlineImages || []).length;
+        let placements = null;
+        if (imageCount) {
+          if (!Array.isArray(raw?.placements) || raw.placements.length !== imageCount)
+            issues.push(`placements必须为${imageCount}张插图各输出一个位置`);
+          else {
+            const boxes = raw.placements.map((p) =>
+              p && typeof p === "object"
+                ? { x: p.x, y: p.y, w: p.w, h: p.h }
+                : { x: NaN },
+            );
+            if (boxes.some((b) => ![b.x, b.y, b.w, b.h].every(Number.isFinite)))
+              issues.push("placements每项必须是含数字x,y,w,h的对象");
+            else if (
+              boxes.some(
+                (b) =>
+                  b.x < 0 ||
+                  b.y < 0 ||
+                  b.x + b.w > 1600 ||
+                  b.y + b.h > 900 ||
+                  b.w < 120 ||
+                  b.h < 120 ||
+                  b.w > 1200 ||
+                  b.h > 800,
+              )
+            )
+              issues.push("placements坐标超出1600×900画布或尺寸不合理(宽120-1200,高120-800)");
+            else {
+              const texts = buildScene(slide, { design, checkAssets: false })
+                .elements.filter((e) => e.kind === "text")
+                .map(({ x, y, w, h }) => ({ x, y, w, h }));
+              const PAD = 16;
+              const hit = (a, b) =>
+                a.x - PAD < b.x + b.w &&
+                a.x + a.w + PAD > b.x &&
+                a.y - PAD < b.y + b.h &&
+                a.y + a.h + PAD > b.y;
+              if (boxes.some((b) => texts.some((t) => hit(b, t))))
+                issues.push("placements与文字区域重叠，须为插图另选留白位置");
+              else if (boxes.some((b, i) => boxes.some((c, j) => j > i && hit(b, c))))
+                issues.push("placements之间互相重叠");
+              else placements = boxes;
+            }
+          }
+        }
         if (!issues.length)
           return {
             deckId: deck.id,
@@ -525,6 +624,7 @@ export class ContentService {
             inputRevision: slide.contentRevision,
             prompt: raw.prompt.trim(),
             layoutDescription: raw.layoutDescription.trim(),
+            placements,
           };
         lastIssues = issues;
         messages.push(

@@ -8,8 +8,6 @@ import { createHash } from "node:crypto";
 import { LocalStore, error } from "./server/store.js";
 import { ContentService } from "./server/contentService.js";
 import { ImageTasks } from "./server/imageTasks.js";
-import { createChatSlideHandler } from "./server/chatSlide.js";
-import { makeDeck } from "./shared/deck.js";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(root, ".env") });
@@ -24,10 +22,10 @@ const configNames = {
 };
 const initialConfig = () => ({
   llmApiKey: process.env.LLM_API_KEY || "",
-  llmApiUrl: process.env.LLM_API_URL || "https://api.openai.com/v1",
+  llmApiUrl: process.env.LLM_API_URL || "",
   llmModel: process.env.LLM_MODEL || "",
   gptimage2ApiKey: process.env.GPTIMAGE2_API_KEY || "",
-  gptimage2ApiUrl: process.env.GPTIMAGE2_API_URL || "https://api.openai.com/v1",
+  gptimage2ApiUrl: process.env.GPTIMAGE2_API_URL || "",
   gptimage2Model: process.env.GPTIMAGE2_MODEL || "",
 });
 const masked = (c) => ({
@@ -323,9 +321,24 @@ export async function createApp({
             taskId: task.requestId,
             description: plan.layoutDescription,
           },
+          placements: plan.placements || null,
         },
       });
     }),
+  );
+  app.post(
+    "/api/deck-inline-image",
+    asyncRoute(async (req, res) =>
+      res.json(
+        await store.serial("image-submission", () =>
+          images.enqueueInline({
+            deckId: req.body.deckId,
+            slideId: req.body.slideId,
+            prompt: req.body.prompt,
+          }),
+        ),
+      ),
+    ),
   );
   app.post(
     "/api/image-tasks",
@@ -351,48 +364,6 @@ export async function createApp({
     asyncRoute(async (req, res) =>
       res.json(await images.cancel(req.params.id)),
     ),
-  );
-  // 保留已有调用方的文案接口；所有新工作台修改使用明确字段接口。
-  app.post(
-    "/api/chat-slide",
-    asyncRoute((req, res) =>
-      content.serial(() =>
-        createChatSlideHandler({ getRuntimeConfig: () => runtimeConfig })(
-          req,
-          res,
-        ),
-      ),
-    ),
-  );
-  app.post(
-    "/api/plan-deck-outline",
-    asyncRoute(async (req, res) => {
-      const deck = makeDeck({
-        title: String(req.body.title || req.body.topic || "")
-          .split(/[\n。；]/)[0]
-          .slice(0, 80),
-        slideCount: Number(req.body.slideCount || 6),
-        sources: [
-          { id: "source-1", name: "用户原文", text: req.body.topic || "" },
-        ],
-      });
-      const result = await content.draft(deck);
-      res.json({
-        success: true,
-        slideCount: result.deck.slides.length,
-        outline: result.deck.slides.map((s, i) => ({
-          ...s,
-          slideIndex: i + 1,
-          draftBullets: s.bullets,
-          suggestedLayout: s.layoutId,
-        })),
-        issues: result.issues,
-        meta: {
-          plannedSlideCount: deck.slides.length,
-          audience: deck.audience,
-        },
-      });
-    }),
   );
   app.use("/api", (_req, res) =>
     res.status(404).json({ error: "接口不存在或已迁移到原生工作台" }),
