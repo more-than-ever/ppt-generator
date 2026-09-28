@@ -1,0 +1,22 @@
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import SceneCanvas from '../src/components/SceneCanvas.jsx';
+import { waitForFonts, createTextMeasurer, buildScene } from '../shared/slideScene.js';
+import { layoutFixture, visualFixture, sampleDesigns } from './fixtures.mjs';
+
+await waitForFonts();
+const params = new URLSearchParams(location.search);
+const slide = params.has('case') ? visualFixture(params.get('case')) : layoutFixture(params.get('layout') || 'cover-hero');
+const design = sampleDesigns.find((d) => d.name === params.get('design')) || sampleDesigns[0];
+const canvas = document.createElement('canvas'); canvas.width = 1200; canvas.height = 800;
+const ctx = canvas.getContext('2d');
+const gradient = ctx.createLinearGradient(0, 0, 1200, 800); gradient.addColorStop(0, '#dae5f1'); gradient.addColorStop(1, '#e2e7db');
+ctx.fillStyle = gradient; ctx.fillRect(0, 0, 1200, 800);
+ctx.fillStyle = '#a9bdc4'; ctx.beginPath(); ctx.arc(870, 245, 130, 0, Math.PI * 2); ctx.fill();
+ctx.fillStyle = '#788f8d'; ctx.beginPath(); ctx.moveTo(0, 800); ctx.lineTo(420, 160); ctx.lineTo(860, 800); ctx.fill();
+ctx.fillStyle = '#49676c'; ctx.beginPath(); ctx.moveTo(430, 800); ctx.lineTo(880, 400); ctx.lineTo(1200, 700); ctx.lineTo(1200, 800); ctx.fill();
+const dataUrl = canvas.toDataURL('image/png');
+const assets = Object.fromEntries(slide.assets.map(a => [a.id, { dataUrl }]));
+const scene = buildScene(slide, { design, assets, measure: createTextMeasurer() });
+window.sample = { slide, scene, assets, design };
+createRoot(document.getElementById('root')).render(<SceneCanvas scene={scene} assets={assets} />);

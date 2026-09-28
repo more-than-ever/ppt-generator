@@ -1,37 +1,37 @@
 @echo off
-title SlideFlow AI PPT
+chcp 65001 >nul
+title SlideFlow AI PPT 智能演示文稿
 cd /d "%~dp0"
 
-echo ======================================================
-echo           SlideFlow AI PPT ������վ������
-echo ======================================================
+echo ================================================================
+echo           SlideFlow AI PPT 智能演示文稿生成器 (发布版)
+echo ================================================================
 echo.
 
-:: 1. �ͷſ��ܱ�ռ�õ� 3001 �˿ڣ�ȷ��˳������
-for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":3001" ^| findstr "LISTENING"') do (
-    taskkill /f /pid %%a >nul 2>nul
+:: 1. 查找 Node.js 运行环境 (优先使用随包附带的内置免安装运行时)
+set "NODE_EXE="
+if exist "%~dp0runtime\node.exe" (
+    set "NODE_EXE=%~dp0runtime\node.exe"
+    echo [*] 已加载内置免安装运行环境 (runtime\node.exe)
+) else (
+    where node >nul 2>nul
+    if not errorlevel 1 (
+        set "NODE_EXE=node"
+        echo [*] 已加载系统 Node.js 环境
+    )
 )
 
-:: 2. ��� Node.js ����
-where node >nul 2>nul
-if %errorlevel% neq 0 (
-    echo [����] δ��⵽ Node.js�����Ȱ�װ Node.js �����ԡ�
+if "%NODE_EXE%"=="" (
+    echo [错误] 未检测到 Node.js 运行环境！
+    echo 请确认 runtime 文件夹中的 node.exe 是否存在，或在电脑上安装 Node.js。
+    echo.
     pause
     exit /b
 )
 
-:: 3. �Զ���������д���ַ
-echo [*] ����Ϊ����Ĭ�������: http://localhost:3001
-start http://localhost:3001
-
-echo [*] ������������(���ޱ�������: 127.0.0.1:3001)
+echo [*] 正在检查依赖、构建产物、端口及服务健康状态。
+echo [*] 不会终止占用端口的其他进程。
+echo [*] 文稿保存在项目 data 文件夹，请定期导出备份。
 echo.
-echo ======================================================
-echo   ��ַ: http://localhost:3001
-echo   ��ʾ: ���ִ˴��ڿ������ɳ���ʹ�á�
-echo   �ر�: ֱ�ӹرմ˺ڿ򴰿ڼ����˳�����
-echo ======================================================
-echo.
-
-node server.js
+"%NODE_EXE%" server\launch.js
 pause

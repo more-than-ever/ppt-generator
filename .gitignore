@@ -7,3 +7,10 @@ dist-ssr
 *.local
 *.log
 .DS_Store
+data/
+.env.tmp
+.test-data/
+test-results/
+playwright-report/
+artifacts/
+runtime/

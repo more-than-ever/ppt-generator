@@ -1,4 +1,5 @@
 import React from 'react';
+import { getNextSlideNumber } from '../services/deckPolicy';
 import { CheckCircle2, Clock, RefreshCw, Plus, Eye, EyeOff, Sparkles, Image as ImageIcon } from 'lucide-react';
 
 export default function SlideProgressRail({
@@ -6,23 +7,26 @@ export default function SlideProgressRail({
   activeSlideIndex = 0,
   onSelectSlide,
   onAddSlide,
+  totalSlides = 6,
+  isLoading = false,
   generatingImageIndex = null,
   isViewerOpen = false,
   onToggleViewer,
   theme = { bg: '0D0E12', border: '262626', primary: 'ffffff', secondary: 'a3a3a3' }
 }) {
   const completedCount = slides.filter(s => Boolean(s.imageUrl)).length;
+  const nextPage = getNextSlideNumber(slides, totalSlides);
 
   return (
     <div className="w-full border-t border-neutral-800/80 bg-[#090A0D]/95 backdrop-blur-md px-4 py-2 flex items-center justify-between gap-3 z-30 select-none shadow-lg">
       {/* Left: Overall Generation Progress Badge */}
       <div className="flex items-center space-x-2.5 flex-shrink-0">
         <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-neutral-900 border border-neutral-800 text-xs">
-          <span className="text-neutral-400 font-mono">共 {slides.length} 页</span>
+          <span className="text-neutral-400 font-mono">共 {totalSlides} 页</span>
           <span className="text-neutral-600">|</span>
           <span className={`flex items-center space-x-1 font-medium ${completedCount > 0 ? 'text-emerald-400' : 'text-neutral-400'}`}>
             <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>已生图 {completedCount}/{slides.length}</span>
+            <span>已生图 {completedCount}/{totalSlides}</span>
           </span>
         </div>
       </div>
@@ -33,7 +37,8 @@ export default function SlideProgressRail({
           const isActive = idx === activeSlideIndex;
           const isGeneratingThis = generatingImageIndex === idx;
           const hasImage = Boolean(s.imageUrl);
-          const isPendingPlan = !s.bullets || s.bullets.length === 0 || (s.title && s.title.includes('待规划'));
+          const isCoverSlide = s.type === 'cover' || idx === 0;
+          const isPendingPlan = (s.title && s.title.includes('待规划')) || (!isCoverSlide && (!s.bullets || s.bullets.length === 0));
 
           return (
             <button
@@ -104,15 +109,16 @@ export default function SlideProgressRail({
         })}
 
         {/* Quick Add Slide Button */}
-        {onAddSlide && (
+        {onAddSlide && nextPage !== null && (
           <button
             type="button"
             onClick={onAddSlide}
+            disabled={isLoading}
             className="flex-shrink-0 h-18 px-3 rounded-xl border border-dashed border-neutral-800 hover:border-neutral-700 bg-neutral-950/40 hover:bg-neutral-900/60 text-neutral-400 hover:text-white flex flex-col items-center justify-center space-y-1 transition text-[10px] cursor-pointer"
-            title="添加新幻灯片"
+            title={`制作大纲第 ${nextPage} 页`}
           >
             <Plus className="w-4 h-4" />
-            <span>加页</span>
+            <span>制作第 {nextPage} 页</span>
           </button>
         )}
       </div>
